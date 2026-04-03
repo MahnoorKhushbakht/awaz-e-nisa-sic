@@ -1,0 +1,20 @@
+# --- Python & Environments ---
+venv/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Databases (CRITICAL: Private User Data) ---
+*.db
+*.sqlite3
+
+# --- Streamlit & OS ---
+.streamlit/config.toml
+.DS_Store
+Thumbs.db
+
+# --- Large Folders / Model Data ---
+# Agar aapne models ya bari PDF files local rakhi hain jo Git pe nahi bhejni
+vector_db/
+temp_pdf/
