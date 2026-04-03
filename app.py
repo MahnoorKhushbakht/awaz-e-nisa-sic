@@ -50,7 +50,6 @@ st.set_page_config(page_title="Awaz-e-Nisa", page_icon="⚖️", layout="wide", 
 
 @st.cache_resource
 def load_whisper_model():
-    # Model updated to 'tiny' for faster response
     return whisper.load_model("small")
 
 init_db()
@@ -144,7 +143,7 @@ def render_analysis_panel(msg_index, original_query):
     
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        if st.button("✅ Case Merits", key=f"m_{msg_index}", use_container_width=True):
+        if st.button("✅ Case Merits/Demerits", key=f"m_{msg_index}", use_container_width=True):
             if not panel["merits_res"]:
                 with st.spinner("Analyzing..."): panel["merits_res"] = st.session_state.merits_chain.invoke(original_query)
             panel["merits"] = not panel["merits"]; st.rerun()

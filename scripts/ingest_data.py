@@ -53,10 +53,8 @@ def build_vector_db():
 
     # Metadata Enrichment
     for doc in documents:
-        # Hum full path se sirf filename nikal rahe hain reference ke liye
         source_path = doc.metadata.get("source", "Unknown")
         doc.metadata["file_name"] = os.path.basename(source_path)
-        # Safai: Extra spaces khatam karna
         doc.page_content = " ".join(doc.page_content.split())
 
     print(f"✅ Total Pages Processed: {len(documents)}")

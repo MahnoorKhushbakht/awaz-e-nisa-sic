@@ -74,16 +74,57 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# --- ANALYSIS CHAINS (Slightly relaxed for better results) ---
 
-merits_prompt = ChatPromptTemplate.from_template("Analyze the legal strength (merits) of this situation based on Pakistani law: {question}\nContext: {context}")
+
+# --- ANALYSIS CHAINS (Auto-detect Language: English or Roman Urdu) ---
+
+# 1. Case Merits: Same language as query
+merits_prompt = ChatPromptTemplate.from_template("""
+Analyze the legal strength (merits) and potential weaknesses (demerits) of this situation based on Pakistani law.
+USER QUERY: {question}
+CONTEXT: {context}
+
+INSTRUCTIONS:
+1. Identify the language (English or Roman Urdu) and reply in the SAME language.
+2. Provide two clear sections:
+   - **Legal Merits (Strengths):** Cite relevant Sections (e.g., Section 2(h) of Harassment Act).
+   - **Potential Demerits (Weaknesses):** Mention challenges like lack of evidence, delays, or procedural gaps.
+3. Be objective and professional.
+""")
 merits_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | merits_prompt | llm | StrOutputParser())
 
-opp_prompt = ChatPromptTemplate.from_template("What arguments could the opposing party raise in this Pakistani legal scenario: {question}\nContext: {context}")
+# 2. Opposition Arguments: Same language as query
+opp_prompt = ChatPromptTemplate.from_template("""
+Predict arguments the opposing party will raise in this Pakistani legal scenario.
+USER QUERY: {question}
+CONTEXT FROM DATABASE: {context}
+
+INSTRUCTIONS:
+- MATCH THE LANGUAGE of the user query (English for English, Roman Urdu for Roman Urdu).
+- Be realistic about court tactics in Pakistan.
+""")
 opposition_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | opp_prompt | llm | StrOutputParser())
 
-time_prompt = ChatPromptTemplate.from_template("Based on typical Pakistani court procedures, what is the estimated timeline for: {question}\nContext: {context}")
+# 3. Timeline: Same language as query
+time_prompt = ChatPromptTemplate.from_template("""
+Provide an estimated timeline for this case based on Pakistani court procedures.
+USER QUERY: {question}
+CONTEXT FROM DATABASE: {context}
+
+INSTRUCTIONS:
+- MATCH THE LANGUAGE of the user query.
+- Mention stages like Summoning, Evidence, and Final Arguments.
+""")
 timeline_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | time_prompt | llm | StrOutputParser())
 
-draft_prompt = ChatPromptTemplate.from_template("Create a formal legal notice or petition draft in English for this issue: {question}\nContext: {context}. Also provide a brief explanation in the user's language.")
+# 4. Legal Draft: Always English (Standard) + User Language Summary
+draft_prompt = ChatPromptTemplate.from_template("""
+Create a formal legal notice or petition draft for this issue.
+USER QUERY: {question}
+CONTEXT FROM DATABASE: {context}
+
+INSTRUCTIONS:
+1. LEGAL DRAFT: Always write the actual draft in FORMAL ENGLISH (Standard for Pakistan Courts).
+2. BRIEF SUMMARY: Provide a 2-line explanation in the SAME LANGUAGE as the user query (English or Roman Urdu).
+""")
 draft_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | draft_prompt | llm | StrOutputParser())
