@@ -14,7 +14,6 @@ embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 try:
     vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
-
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5}) 
 except Exception as e:
     print(f"Warning: Could not load vectorstore: {e}")
@@ -22,7 +21,8 @@ except Exception as e:
         def invoke(self, *args, **kwargs): return []
     retriever = DummyRetriever()
 
-llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.2)
+# --- LLM CONFIGURATION (Temperature set to 0.1 for high accuracy) ---
+llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.1)
 
 def retrieve_context(inputs):
     query = inputs if isinstance(inputs, str) else inputs.get("question", "")
@@ -37,10 +37,11 @@ def retrieve_context(inputs):
         return "No specific legal context found for this exact query."
     return "\n\n".join(doc.page_content.strip() for doc in docs)
 
-# --- 1. MAIN RAG CHAIN ---
+# --- 1. MAIN RAG CHAIN (IMPROVED PROMPT) ---
 
 main_prompt = ChatPromptTemplate.from_template("""
-You are Awaz-e-Nisa, an expert legal AI assistant for Pakistan.
+You are Awaz-e-Nisa, a highly accurate Legal AI Assistant for Pakistan. 
+Your goal is to provide legally sound advice using the provided context.
 
 CONTEXT FROM DATABASE:
 {context}
@@ -48,13 +49,21 @@ CONTEXT FROM DATABASE:
 USER QUERY: {question}
 MODE: {mode}
 
-INSTRUCTIONS:
-1. Primary Goal: Use the CONTEXT to provide specific legal advice according to Pakistani Law.
-2. If the context is empty or doesn't fully cover the query, use your general knowledge of Pakistani Law (Constitution, PPC, Family Laws) to help the user. Do NOT say 'outside knowledge base' unless the query is completely unrelated to Law (e.g., cooking, sports).
-3. LANGUAGE: Match the user's language. If they use Roman Urdu, reply in Roman Urdu only.
+STRICT INSTRUCTIONS:
+1. CITATION: You MUST mention specific Section numbers and Law names (e.g., Section 7 of MFLO 1961) if they are in the context.
+2. ROMAN URDU GLOSSARY: 
+   - 'Haq-e-Talaq-e-Tafweez' = Delegated right of divorce (MFLO Section 8).
+   - 'Kharcha' / 'Nan-Nafqa' = Maintenance (MFLO Section 9).
+   - 'Dusri Shadi' = Polygamy rules (MFLO Section 6).
+   - 'Wirasat' = Succession/Inheritance (MFLO Section 4).
+3. LANGUAGE: Match the user's language exactly. If they use Roman Urdu, you MUST reply in Roman Urdu.
 4. TONE:
-   - 'GENERAL USER (Woman)': Start with a very kind, empathetic acknowledgement of their situation. Explain legal rights in simple terms.
-   - 'LEGAL PRO': Be technical, use Section numbers, and skip empathy.
+   - 'GENERAL USER (Woman)': Empathetic + Simple Law explanation + MUST include Section numbers.
+   - 'LEGAL PRO': Technical + Law Citations + No empathy.
+
+FEW-SHOT EXAMPLE:
+User: "Shohar dusri shadi kaise kar sakta hai?"
+Response: "Pakistani qanoon (MFLO Section 6) ke mutabiq, shohar ko dusri shadi ke liye pehli bivi ki ijazat aur Arbitration Council ka certificate chahiye hota hai..."
 
 ALWAYS end 'GENERAL USER' responses with this list:
 * FIA Cybercrime: 1991
@@ -74,38 +83,35 @@ rag_chain = (
     | StrOutputParser()
 )
 
+# --- ANALYSIS CHAINS (Updated for accuracy) ---
 
-
-# --- ANALYSIS CHAINS (Auto-detect Language: English or Roman Urdu) ---
-
-# 1. Case Merits: Same language as query
+# 1. Case Merits
 merits_prompt = ChatPromptTemplate.from_template("""
-Analyze the legal strength (merits) and potential weaknesses (demerits) of this situation based on Pakistani law.
+Analyze the legal strength (merits) and weaknesses (demerits) based on Pakistani law.
 USER QUERY: {question}
 CONTEXT: {context}
 
 INSTRUCTIONS:
-1. Identify the language (English or Roman Urdu) and reply in the SAME language.
-2. Provide two clear sections:
-   - **Legal Merits (Strengths):** Cite relevant Sections (e.g., Section 2(h) of Harassment Act).
-   - **Potential Demerits (Weaknesses):** Mention challenges like lack of evidence, delays, or procedural gaps.
-3. Be objective and professional.
+1. Identify the language and reply in the SAME language.
+2. YOU MUST CITE SPECIFIC SECTIONS (e.g., Section 4 of Harassment Act 2010).
+3. Section 1: **Legal Merits (Strengths)**
+4. Section 2: **Potential Demerits (Weaknesses)**
 """)
 merits_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | merits_prompt | llm | StrOutputParser())
 
-# 2. Opposition Arguments: Same language as query
+# 2. Opposition Arguments
 opp_prompt = ChatPromptTemplate.from_template("""
 Predict arguments the opposing party will raise in this Pakistani legal scenario.
 USER QUERY: {question}
 CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
-- MATCH THE LANGUAGE of the user query (English for English, Roman Urdu for Roman Urdu).
-- Be realistic about court tactics in Pakistan.
+- MATCH THE LANGUAGE of the user query.
+- Use the context to find potential legal loopholes they might use.
 """)
 opposition_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | opp_prompt | llm | StrOutputParser())
 
-# 3. Timeline: Same language as query
+# 3. Timeline
 time_prompt = ChatPromptTemplate.from_template("""
 Provide an estimated timeline for this case based on Pakistani court procedures.
 USER QUERY: {question}
@@ -113,11 +119,11 @@ CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
 - MATCH THE LANGUAGE of the user query.
-- Mention stages like Summoning, Evidence, and Final Arguments.
+- Mention stages like Summoning, Evidence, and Final Arguments based on standard procedures.
 """)
 timeline_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | time_prompt | llm | StrOutputParser())
 
-# 4. Legal Draft: Always English (Standard) + User Language Summary
+# 4. Legal Draft
 draft_prompt = ChatPromptTemplate.from_template("""
 Create a formal legal notice or petition draft for this issue.
 USER QUERY: {question}
@@ -125,6 +131,6 @@ CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
 1. LEGAL DRAFT: Always write the actual draft in FORMAL ENGLISH (Standard for Pakistan Courts).
-2. BRIEF SUMMARY: Provide a 2-line explanation in the SAME LANGUAGE as the user query (English or Roman Urdu).
+2. BRIEF SUMMARY: Provide a 2-line explanation in the SAME LANGUAGE as the user query.
 """)
 draft_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | draft_prompt | llm | StrOutputParser())
