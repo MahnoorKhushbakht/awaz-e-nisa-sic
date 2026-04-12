@@ -21,7 +21,7 @@ except Exception as e:
         def invoke(self, *args, **kwargs): return []
     retriever = DummyRetriever()
 
-# --- LLM CONFIGURATION (Temperature set to 0.1 for high accuracy) ---
+# --- LLM CONFIGURATION ---
 llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.1)
 
 def retrieve_context(inputs):
@@ -37,11 +37,11 @@ def retrieve_context(inputs):
         return "No specific legal context found for this exact query."
     return "\n\n".join(doc.page_content.strip() for doc in docs)
 
-# --- 1. MAIN RAG CHAIN (IMPROVED PROMPT) ---
+# --- 1. MAIN RAG CHAIN ---
 
 main_prompt = ChatPromptTemplate.from_template("""
 You are Awaz-e-Nisa, a highly accurate Legal AI Assistant for Pakistan. 
-Your goal is to provide legally sound advice using the provided context.
+Your goal is to provide legally sound advice using ONLY the provided context.
 
 CONTEXT FROM DATABASE:
 {context}
@@ -50,20 +50,20 @@ USER QUERY: {question}
 MODE: {mode}
 
 STRICT INSTRUCTIONS:
-1. CITATION: You MUST mention specific Section numbers and Law names (e.g., Section 7 of MFLO 1961) if they are in the context.
-2. ROMAN URDU GLOSSARY: 
+1. LANGUAGE MATCH: Identify the language of the USER QUERY. If it is Roman Urdu, you MUST reply in Roman Urdu. If it is English, you MUST reply in English. Do not mix languages unless necessary for technical terms.
+2. CITATION: You MUST mention specific Section numbers and Law names (e.g., Section 7 of MFLO 1961) if they are in the context.
+3. GROUNDING & HALLUCINATION CONTROL: 
+   - Answer ONLY based on the provided context. 
+   - If the context does not contain a specific court decision or final verdict for a case mentioned, DO NOT make one up. 
+   - Explicitly state: "The final court decision for this specific case is not available in the provided legal records."
+4. ROMAN URDU GLOSSARY: 
    - 'Haq-e-Talaq-e-Tafweez' = Delegated right of divorce (MFLO Section 8).
    - 'Kharcha' / 'Nan-Nafqa' = Maintenance (MFLO Section 9).
    - 'Dusri Shadi' = Polygamy rules (MFLO Section 6).
    - 'Wirasat' = Succession/Inheritance (MFLO Section 4).
-3. LANGUAGE: Match the user's language exactly. If they use Roman Urdu, you MUST reply in Roman Urdu.
-4. TONE:
+5. TONE:
    - 'GENERAL USER (Woman)': Empathetic + Simple Law explanation + MUST include Section numbers.
    - 'LEGAL PRO': Technical + Law Citations + No empathy.
-
-FEW-SHOT EXAMPLE:
-User: "Shohar dusri shadi kaise kar sakta hai?"
-Response: "Pakistani qanoon (MFLO Section 6) ke mutabiq, shohar ko dusri shadi ke liye pehli bivi ki ijazat aur Arbitration Council ka certificate chahiye hota hai..."
 
 ALWAYS end 'GENERAL USER' responses with this list:
 * FIA Cybercrime: 1991
@@ -83,7 +83,7 @@ rag_chain = (
     | StrOutputParser()
 )
 
-# --- ANALYSIS CHAINS (Updated for accuracy) ---
+# --- ANALYSIS CHAINS ---
 
 # 1. Case Merits
 merits_prompt = ChatPromptTemplate.from_template("""
@@ -92,8 +92,8 @@ USER QUERY: {question}
 CONTEXT: {context}
 
 INSTRUCTIONS:
-1. Identify the language and reply in the SAME language.
-2. YOU MUST CITE SPECIFIC SECTIONS (e.g., Section 4 of Harassment Act 2010).
+1. LANGUAGE: Identify the language of the USER QUERY. Reply ONLY in that same language (Roman Urdu or English).
+2. YOU MUST CITE SPECIFIC SECTIONS.
 3. Section 1: **Legal Merits (Strengths)**
 4. Section 2: **Potential Demerits (Weaknesses)**
 """)
@@ -106,7 +106,7 @@ USER QUERY: {question}
 CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
-- MATCH THE LANGUAGE of the user query.
+- LANGUAGE: Reply ONLY in the SAME language as the user query (Roman Urdu or English).
 - Use the context to find potential legal loopholes they might use.
 """)
 opposition_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | opp_prompt | llm | StrOutputParser())
@@ -118,8 +118,8 @@ USER QUERY: {question}
 CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
-- MATCH THE LANGUAGE of the user query.
-- Mention stages like Summoning, Evidence, and Final Arguments based on standard procedures.
+- LANGUAGE: Reply ONLY in the SAME language as the user query (Roman Urdu or English).
+- Mention stages like Summoning, Evidence, and Final Arguments.
 """)
 timeline_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | time_prompt | llm | StrOutputParser())
 
@@ -131,6 +131,6 @@ CONTEXT FROM DATABASE: {context}
 
 INSTRUCTIONS:
 1. LEGAL DRAFT: Always write the actual draft in FORMAL ENGLISH (Standard for Pakistan Courts).
-2. BRIEF SUMMARY: Provide a 2-line explanation in the SAME LANGUAGE as the user query.
+2. BRIEF SUMMARY: Provide a 2-line explanation in the SAME LANGUAGE as the user query (Roman Urdu or English).
 """)
 draft_chain = ({"context": RunnableLambda(retrieve_context), "question": RunnablePassthrough()} | draft_prompt | llm | StrOutputParser())

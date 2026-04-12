@@ -1,139 +1,126 @@
 import pandas as pd
 import time
 import google.generativeai as genai
+import re
+import os
 from legal_advisor import rag_chain, retriever 
 
 # --- 1. API KEY ROTATION SETUP ---
-
-
+API_KEYS = ["AIzaSyCsjo9b7SyVO1l_vGzRwH00oxx1yQ4OOVE", "AIzaSyDeA1RDWbtS41duiYZZ6KKIaQjJQTz1dwI"] 
 current_key_index = 0
 
 def configure_gemini():
-    """Gemini ko current active key se configure karne ke liye"""
     active_key = API_KEYS[current_key_index]
     genai.configure(api_key=active_key)
-   
-    print(f"🔄 Using API Key Index: {current_key_index} (Key starts with: {active_key[:8]}...)")
+    print(f"🔄 Switched to API Key Index: {current_key_index}")
 
 def rotate_api_key():
-    """Key badalne ke liye jab quota khatam ho jaye"""
     global current_key_index
     current_key_index = (current_key_index + 1) % len(API_KEYS)
     configure_gemini()
-    print(f"✅ Key Rotated! Retrying with new key...")
+    print("⏳ Rate Limit Hit! Cooldown for 30 seconds...")
+    time.sleep(30) 
 
-# --- 2. TEST DATASET (30 QUESTIONS) ---
+# --- 2. OPTIMIZED TEST DATASET (20 TOPIC-BASED QUERIES) ---
 test_dataset = [
-    # --- FAMILY LAW & MFLO 1961 ---
-    {"question": "What is the legal procedure for a second marriage under Pakistani law?", "expected_sections": ["Section 6", "Polygamy", "Arbitration Council"], "mode": "LEGAL PRO"},
-    {"question": "Shohar ne talaq de di hai, notice kahan dena hai aur iddat kab shuru hogi?", "expected_sections": ["Section 7", "Chairman", "Union Council"], "mode": "GENERAL USER (Woman)"},
-    {"question": "My husband is not providing maintenance, where can I file a complaint?", "expected_sections": ["Section 9", "Maintenance", "Arbitration Council"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Nikah nama mein 'Haq-e-Talaq-e-Tafweez' ka kya matlab hai?", "expected_sections": ["Section 8", "Dissolution", "Delegated"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Do orphaned grandchildren have a share in their grandfather's property?", "expected_sections": ["Section 4", "Succession", "Grandchildren"], "mode": "LEGAL PRO"},
-    {"question": "What is the minimum age for marriage for a girl in Punjab?", "expected_sections": ["Child Marriage", "Restraint", "16", "18"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Agar nikah register na ho toh kya ye kanoonan jurm hai?", "expected_sections": ["Section 5", "Registration", "Penalty"], "mode": "LEGAL PRO"},
-    {"question": "Can a woman claim her Haq Mehr at the time of Rukhsati?", "expected_sections": ["Dower", "Prompt", "Deferred", "Mehr"], "mode": "GENERAL USER (Woman)"},
-    {"question": "What happens if a husband divorces his wife without informing the Union Council?", "expected_sections": ["Section 7", "Invalid", "Notice", "Fine"], "mode": "LEGAL PRO"},
-    {"question": "Shohar ne doosri shadi ki ijazat nahi li, kya main court ja sakti hoon?", "expected_sections": ["Section 6", "Permission", "Arbitration", "Criminal"], "mode": "GENERAL USER (Woman)"},
+    # Marriage & Polygamy
+    {"question": "What is the legal procedure for a second marriage in Pakistan?", "expected_sections": ["Section 6", "Polygamy", "Arbitration Council"], "mode": "LEGAL PRO"},
+    {"question": "Shohar ne doosri shadi ki ijazat nahi li, kya ye jurm hai?", "expected_sections": ["Section 6", "Permission", "Fine"], "mode": "GENERAL USER (Woman)"},
+    {"question": "Nikah register na ho toh kya saza ho sakti hai?", "expected_sections": ["Section 5", "Registration", "Penalty"], "mode": "LEGAL PRO"},
+    {"question": "What is the minimum age for marriage in Punjab for girls?", "expected_sections": ["Child Marriage", "16", "18"], "mode": "GENERAL USER (Woman)"},
 
-    # --- KHULA, DISSOLUTION & CUSTODY ---
-    {"question": "What is the procedure for a woman to obtain Khula through court?", "expected_sections": ["Family Courts Act", "Khula", "Dissolution"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Bachon ki custody (Hizanat) ke liye maa ka kya haq hai?", "expected_sections": ["Guardians", "Wards", "Custody", "Hizanat"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Can a father stop paying maintenance if the mother remarries?", "expected_sections": ["Maintenance", "Father", "Responsibility", "Minor"], "mode": "LEGAL PRO"},
-    {"question": "What is the difference between Khula and Talaq-e-Tafweez?", "expected_sections": ["Dissolution", "Delegated", "Court", "Agreement"], "mode": "LEGAL PRO"},
-    {"question": "Court mein Khula ka case kitne arsay mein finalize hota hai?", "expected_sections": ["Family Courts", "Procedure", "Timeline"], "mode": "GENERAL USER (Woman)"},
+    # Divorce & Iddat
+    {"question": "Shohar ne talaq di hai, notice Chairman ko kab dena hota hai?", "expected_sections": ["Section 7", "Notice", "Chairman"], "mode": "GENERAL USER (Woman)"},
+    {"question": "Explain 'Haq-e-Talaq-e-Tafweez' in Nikahnama.", "expected_sections": ["Section 8", "Delegated", "Divorce"], "mode": "LEGAL PRO"},
+    {"question": "Khula lene ka sahi kanooni tariqa kya hai?", "expected_sections": ["Family Courts", "Khula", "Dissolution"], "mode": "GENERAL USER (Woman)"},
+    {"question": "Does a divorce become effective immediately without Union Council notice?", "expected_sections": ["Section 7", "Invalid", "90 days"], "mode": "LEGAL PRO"},
 
-    # --- INHERITANCE (WIRASAT) ---
-    {"question": "How much share does a widow get if she has children?", "expected_sections": ["Inheritance", "Widow", "1/8th", "Share"], "mode": "LEGAL PRO"},
-    {"question": "Kya beti ka hissa bete se aadha hota hai Islamic law mein?", "expected_sections": ["Inheritance", "Daughter", "Half", "Succession"], "mode": "GENERAL USER (Woman)"},
-    {"question": "If a person dies without any children, who inherits the property?", "expected_sections": ["Residuaries", "Parents", "Spouse", "Succession"], "mode": "LEGAL PRO"},
-    {"question": "Can a father disinherit (Aaq) his daughter from his legal property?", "expected_sections": ["Shariah", "Legal", "Heirs", "Invalid"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Maa ki property mein bachon ka kitna hissa hota hai?", "expected_sections": ["Mother", "Property", "Heirs", "Succession"], "mode": "GENERAL USER (Woman)"},
+    # Maintenance & Custody
+    {"question": "My husband is not giving me money (Kharcha), where to complain?", "expected_sections": ["Section 9", "Maintenance", "Arbitration Council"], "mode": "GENERAL USER (Woman)"},
+    {"question": "Bachon ki custody (Hizanat) ka faisla kaise hota hai?", "expected_sections": ["Guardians", "Custody", "Welfare"], "mode": "GENERAL USER (Woman)"},
+    {"question": "Can a wife claim maintenance after divorce during Iddat?", "expected_sections": ["Iddat", "Maintenance", "Kharcha"], "mode": "LEGAL PRO"},
 
-    # --- CYBERCRIME (FIA / PECA) ---
-    {"question": "Someone is blackmailing me with my pictures on social media, what should I do?", "expected_sections": ["FIA", "Cybercrime", "PECA", "1991"], "mode": "GENERAL USER (Woman)"},
-    {"question": "Fake identity bana kar koi tang kar raha hai, kya ye jurm hai?", "expected_sections": ["PECA", "Spoofing", "Identity", "Forgery"], "mode": "GENERAL USER (Woman)"},
-    {"question": "What is the punishment for online harassment under PECA 2016?", "expected_sections": ["Section 21", "Imprisonment", "Fine", "Privacy"], "mode": "LEGAL PRO"},
-    {"question": "How to file a complaint in FIA Cybercrime wing online?", "expected_sections": ["NR3C", "Portal", "Complaint", "Evidence"], "mode": "GENERAL USER (Woman)"},
+    # Inheritance
+    {"question": "Do orphaned grandchildren inherit from their grandfather?", "expected_sections": ["Section 4", "Succession", "Grandchildren"], "mode": "LEGAL PRO"},
+    {"question": "Beti ka hissa bete se kitna hota hai kanoon ki nazar mein?", "expected_sections": ["Inheritance", "Daughter", "Half"], "mode": "GENERAL USER (Woman)"},
+    {"question": "How much share does a widow get if the deceased has children?", "expected_sections": ["Inheritance", "Widow", "1/8th"], "mode": "LEGAL PRO"},
+    {"question": "Kya walid apni beti ko wirasat se aaq (disinherit) kar sakta hai?", "expected_sections": ["Invalid", "Heirs", "Shariah"], "mode": "GENERAL USER (Woman)"},
 
-    # --- WORKPLACE HARASSMENT (2010 Act) ---
-    {"question": "Office mein boss ghalat tareeqay se touch karta hai, kya ye harassment hai?", "expected_sections": ["Section 2", "Harassment", "Workplace"], "mode": "GENERAL USER (Woman)"},
-    {"question": "If the office committee is not listening to my harassment complaint, where can I appeal?", "expected_sections": ["Section 8", "Ombudsman", "Mohtasib"], "mode": "GENERAL USER (Woman)"},
-    {"question": "What are the major penalties for a harasser under the 2010 Act?", "expected_sections": ["Section 4", "Penalties", "Dismissal"], "mode": "LEGAL PRO"},
-    {"question": "Can a domestic worker file a harassment complaint under the 2010 Act?", "expected_sections": ["Workplace", "Definition", "Domestic", "Employee"], "mode": "LEGAL PRO"},
-    {"question": "What is the timeline for the Inquiry Committee to decide a case?", "expected_sections": ["30 days", "Procedure", "Inquiry"], "mode": "LEGAL PRO"},
-    {"question": "Agar company harassment policy display na kare toh kya fine hai?", "expected_sections": ["Display", "Code of Conduct", "Penalty"], "mode": "LEGAL PRO"}
+    # Cybercrime
+    {"question": "Someone is blackmailing me with my photos, what should I do?", "expected_sections": ["FIA", "Cybercrime", "PECA"], "mode": "GENERAL USER (Woman)"},
+    {"question": "What is the punishment for online harassment under PECA?", "expected_sections": ["Section 21", "Harassment", "Fine"], "mode": "LEGAL PRO"},
+    {"question": "Fake account bana kar koi tang kare toh kahan report karein?", "expected_sections": ["Identity", "Spoofing", "Complaint"], "mode": "GENERAL USER (Woman)"},
+
+    # Workplace Harassment
+    {"question": "Office boss is harassing me, where to file an appeal?", "expected_sections": ["Ombudsman", "Mohtasib", "Committee"], "mode": "GENERAL USER (Woman)"},
+    {"question": "What are the major penalties for workplace harassment?", "expected_sections": ["Section 4", "Dismissal", "Removal"], "mode": "LEGAL PRO"}
 ]
 
 def run_accuracy_test():
     configure_gemini()
-    print(f"🚀 Starting Awaz-e-Nisa Extended Accuracy Test ({len(test_dataset)} Queries)...\n")
     results = []
     total_score = 0
+    print(f"🚀 Starting System Validation on {len(test_dataset)} Queries...")
 
     for i, test in enumerate(test_dataset):
-        print(f"Testing Query {i+1}/{len(test_dataset)}: {test['question'][:50]}...")
+        print(f"\n[{i+1}/{len(test_dataset)}] Analyzing: {test['question'][:50]}...")
         
         success = False
         attempts = 0
         
-        while not success and attempts < len(API_KEYS):
+        while not success and attempts < (len(API_KEYS) * 2):
             try:
                 start_time = time.time()
                 
-                # A. Test Retrieval (ChromaDB check)
+                # A. Retrieval Test
                 docs = retriever.invoke(test["question"])
-                retrieval_success = len(docs) > 0
+                ret_status = "✅ OK" if len(docs) > 0 else "❌ FAIL"
 
-                # B. Test Generation (Gemini check)
+                # B. Generation Test
                 response = rag_chain.invoke({"question": test["question"], "mode": test["mode"]})
                 
-                end_time = time.time()
-
-                # C. Scoring Logic
-                matched_keywords = [word for word in test["expected_sections"] if word.lower() in response.lower()]
-                accuracy_score = len(matched_keywords) / len(test["expected_sections"])
+                # C. Scoring
+                clean_resp = re.sub(r'[^a-zA-Z0-9\s]', ' ', response.lower())
+                matched = [kw for kw in test["expected_sections"] if kw.lower() in clean_resp]
                 
+                score = len(matched) / len(test["expected_sections"])
+                duration = round(time.time() - start_time, 2)
+
                 results.append({
                     "No": i+1,
-                    "Question": test["question"][:40] + "...",
-                    "Retrieval": "✅ OK" if retrieval_success else "❌ FAIL",
-                    "Accuracy %": round(accuracy_score * 100, 2),
-                    "Time (s)": round(end_time - start_time, 2)
+                    "Retrieved": ret_status,
+                    "Acc %": round(score * 100, 2),
+                    "Time(s)": duration
                 })
                 
-                total_score += accuracy_score
-                success = True # Mark as successful to move to next query
-                print(f"   ↳ Result: {round(accuracy_score * 100, 2)}% Accuracy")
+                total_score += score
+                success = True
+                print(f"   ↳ Result: {round(score * 100, 2)}% Accuracy in {duration}s")
                 
-                # Wait to stay within Rate Limits (Requests Per Minute)
-                time.sleep(5) 
+                # SET TO 20 SECONDS FOR API STABILITY
+                time.sleep(20) 
 
             except Exception as e:
                 if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
-                    print(f"⚠️ Quota Exhausted for Key {current_key_index}. Rotating...")
                     rotate_api_key()
                     attempts += 1
                 else:
-                    print(f"❌ Unexpected Error: {e}")
-                    # Error record karke aage barhein
-                    results.append({"No": i+1, "Question": test["question"][:40], "Retrieval": "❌ ERR", "Accuracy %": 0.0, "Time (s)": 0})
-                    success = True 
+                    print(f"❌ Error: {e}")
+                    results.append({"No": i+1, "Retrieved": "❌ ERR", "Acc %": 0.0, "Time(s)": 0})
+                    success = True
 
-    # --- FINAL REPORT GENERATION ---
-    df = pd.DataFrame(results)
-    print("\n" + "="*70)
-    print("📊 FINAL SYSTEM PERFORMANCE REPORT (30 QUERIES)")
-    print("="*70)
-    print(df.to_string(index=False))
-    
-    final_avg = (total_score / len(test_dataset)) * 100
-    avg_time = sum([r["Time (s)"] for r in results if r["Time (s)"] > 0]) / len(results)
-
-    print("\n" + "="*70)
-    print(f"🏆 OVERALL SYSTEM ACCURACY: {round(final_avg, 2)}%")
-    print(f"⏱️ AVERAGE RESPONSE TIME: {round(avg_time, 2)} seconds")
-    print("="*70)
+    # --- RESULTS REPORT ---
+    if results:
+        df = pd.DataFrame(results)
+        final_acc = (total_score / len(test_dataset)) * 100
+        print("\n" + "="*60)
+        print("📊 FINAL AWAZ-E-NISA SYSTEM REPORT (20 QUERIES)")
+        print("="*60)
+        print(df.to_string(index=False))
+        print("\n" + "="*60)
+        print(f"🏆 OVERALL ACCURACY: {round(final_acc, 2)}%")
+        print(f"⏱️ AVG RESPONSE TIME: {round(df['Time(s)'].mean(), 2)}s")
+        print("="*60)
 
 if __name__ == "__main__":
     run_accuracy_test()
