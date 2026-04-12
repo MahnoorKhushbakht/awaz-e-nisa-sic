@@ -6,7 +6,7 @@ import os
 from legal_advisor import rag_chain, retriever 
 
 # --- 1. API KEY ROTATION SETUP ---
-API_KEYS = ["AIzaSyCsjo9b7SyVO1l_vGzRwH00oxx1yQ4OOVE", "AIzaSyDeA1RDWbtS41duiYZZ6KKIaQjJQTz1dwI"] 
+API_KEYS = ["", ""] 
 current_key_index = 0
 
 def configure_gemini():
