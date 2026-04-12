@@ -16,7 +16,7 @@ pytesseract==0.3.10
 pdfplumber==0.10.4
 pypdf==4.0.0
 Pillow==10.1.0
-opencv-python-headless  # Cloud par GUI nahi hoti, isliye 'headless' version zaroori hai
+opencv-python-headless
 
 # --- Audio & PDF Generation ---
 openai-whisper
