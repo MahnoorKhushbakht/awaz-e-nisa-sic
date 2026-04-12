@@ -822,32 +822,9 @@ if not st.session_state.logged_in and st.session_state.show_landing:
     is_dark = st.session_state.theme == "dark"
 
     # ── Sticky nav ──────────────────────────────────────────
-    st.markdown(f"""
-    <div class="lp-header">
-        <div class="lp-logo">
-            <span style="font-size:28px;">⚖️</span>
-            <span class="lp-logo-text">AWAZ-E-NISA</span>
-            <span style="font-size:12px;color:#806898;margin-left:4px;">آوازِ نسواں</span>
-        </div>
-        <div class="lp-nav">
-            <span class="lp-nav-link">Features</span>
-            <span class="lp-nav-link">Training Data</span>
-            <span class="lp-nav-link">How It Works</span>
-        </div>
-        <div style="display:flex;gap:12px;align-items:center;">
-            <span class="lp-theme-btn">{'☀️ Light' if is_dark else '🌙 Dark'}</span>
-            <button class="lp-cta-btn">Get Started Free</button>
-        </div>
-    </div>
-    <div style="height:80px;"></div>
-    """, unsafe_allow_html=True)
 
-    # Theme toggle top-left
-    c_tl, _, _ = st.columns([1, 8, 1])
-    with c_tl:
-        if st.button("🌙" if is_dark else "☀️", key="lp_theme"):
-            st.session_state.theme = "light" if is_dark else "dark"
-            st.rerun()
+
+
 
     # ── HERO SECTION WITH LARGER TEXT ───────────────────────
     st.markdown("""
