@@ -2,10 +2,11 @@ streamlit
 langchain
 langchain-community
 langchain-google-genai
+langchain-huggingface
 google-generativeai
+sentence-transformers
 chromadb
 pysqlite3-binary
-sentence-transformers
 pytesseract
 pdfplumber
 pypdf
