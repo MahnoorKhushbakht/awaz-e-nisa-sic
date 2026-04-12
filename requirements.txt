@@ -1,51 +1,27 @@
-# --- Core Framework ---
+# --- Core Framework & AI ---
+streamlit==1.30.0
 langchain==0.1.14
 langchain-community==0.0.30
 langchain-core==0.1.52
-
-# --- AI & Embeddings ---
 langchain-google-genai==0.0.6
-langchain-huggingface==0.0.3
-sentence-transformers==2.6.0
 google-generativeai==0.3.2
 
-# --- Vector Database ---
+# --- Embeddings & Vector DB ---
+sentence-transformers==2.6.0
 chromadb==0.4.22
-langchain-chroma==0.1.0
+pysqlite3-binary
 
-# --- Web Framework & UI ---
-streamlit==1.30.0
+# --- OCR & Document Processing ---
+pytesseract==0.3.10
+pdfplumber==0.10.4
+pypdf==4.0.0
+Pillow==10.1.0
+opencv-python-headless  # Cloud par GUI nahi hoti, isliye 'headless' version zaroori hai
+
+# --- Audio & PDF Generation ---
+openai-whisper
 streamlit-mic-recorder==0.0.2
+fpdf==1.7.2
 
 # --- Utilities ---
 python-dotenv==1.0.0
-pypdf==4.0.0
-
-# --- OCR & PDF Processing ---
-pytesseract==0.3.10
-pdfplumber==0.10.4
-Pillow==10.1.0
-
-# --- Image Processing ---
-opencv-python==4.9.0.80
-
-# --- Audio Processing ---
-openai-whisper==20231117
-
-# --- PDF Generation ---
-fpdf==1.7.2
-
-# --- Database ---
-sqlite3  # This is built-in with Python, no need to install
-
-# --- Additional Dependencies (auto-installed by above) ---
-# These are included for clarity but usually install automatically
-numpy==1.26.4
-pydantic==2.5.0
-requests==2.31.0
-tenacity==8.2.3
-aiohttp==3.9.1
-PyYAML==6.0.1
-tiktoken==0.5.2
-regex==2023.12.25
-typing-extensions==4.9.0
