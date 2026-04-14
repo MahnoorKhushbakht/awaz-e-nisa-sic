@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Database file path
-DB_PATH = 'awaz_e_nisa.db'
+DB_PATH = 'users.db'
 
 @contextmanager
 def get_db_connection():

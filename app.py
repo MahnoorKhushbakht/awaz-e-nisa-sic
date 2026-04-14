@@ -15,6 +15,7 @@ from datetime import datetime
 from fpdf import FPDF
 from database import init_db, add_user, verify_user, save_chat_message, get_chat_history, delete_chat_history
 from streamlit_mic_recorder import mic_recorder
+from legal_advisor import is_legal_query
 
 # ============================================================
 #  CONFIGURATION (MUST BE FIRST)
@@ -48,7 +49,7 @@ init_db()
 
 @st.cache_resource
 def load_whisper_model():
-    return whisper.load_model("base")
+    return whisper.load_model("small")
 
 # ============================================================
 #  SESSION STATE DEFAULTS
@@ -60,14 +61,12 @@ defaults = {
     "current_mode": "GENERAL USER (Woman)",
     "active_feature": "Legal Chat",
     "last_query": "",
-    "chat_sessions": {},
-    "active_session_id": None,
-    "show_analysis": False,
-    "analysis_result": None,
     "theme": "dark",
-    "font_size": "medium",
     "expanded_panels": {},
     "last_audio_id": None,
+    "username": "",
+    "active_session_id": None,
+    "chat_sessions": {},
 }
 for key, val in defaults.items():
     if key not in st.session_state:
@@ -779,9 +778,13 @@ def ensure_session():
     if not st.session_state.active_session_id:
         create_new_chat()
 
-# Deep Analysis Panel
+# Deep Analysis Panel - ONLY shows for legal queries
 @st.fragment
 def render_analysis_panel(msg_index, original_query):
+    # Check if this is a legal query - if not, don't show any analysis tools
+    if not is_legal_query(original_query):
+        return  # Exit immediately, show nothing
+    
     panel_key = f"panel_{msg_index}"
     if panel_key not in st.session_state.expanded_panels:
         st.session_state.expanded_panels[panel_key] = {
@@ -823,13 +826,13 @@ def render_analysis_panel(msg_index, original_query):
             panel["draft"] = not panel["draft"]
             st.rerun()
 
-    if panel["merits"] and panel["merits_res"]:
+    if panel["merits"] and panel["merits_res"] and panel["merits_res"] != "SKIP_ANALYSIS":
         st.success(panel["merits_res"])
-    if panel["opposition"] and panel["opp_res"]:
+    if panel["opposition"] and panel["opp_res"] and panel["opp_res"] != "SKIP_ANALYSIS":
         st.error(panel["opp_res"])
-    if panel["timeline"] and panel["time_res"]:
+    if panel["timeline"] and panel["time_res"] and panel["time_res"] != "SKIP_ANALYSIS":
         st.info(panel["time_res"])
-    if panel["draft"] and panel["draft_res"]:
+    if panel["draft"] and panel["draft_res"] and panel["draft_res"] != "SKIP_ANALYSIS":
         st.warning(panel["draft_res"])
         pdf_path = create_pdf(panel["draft_res"])
         with open(pdf_path, "rb") as f:
@@ -1024,48 +1027,46 @@ if not st.session_state.logged_in and st.session_state.show_landing:
     """, unsafe_allow_html=True)
 
 # ============================================================
-#  LOGIN PAGE
+#  LOGIN PAGE (UPDATED WITH OLD LOGIC)
 # ============================================================
 elif not st.session_state.logged_in and not st.session_state.show_landing:
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style="text-align: center;">
-            <div style="font-size: 56px; margin-bottom: 16px;">⚖️</div>
-            <h2>Welcome Back</h2>
-            <p style="color: #8878a8;">Sign in to continue to Awaz-e-Nisa</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        tab1, tab2 = st.tabs(["🔐 Login", "📝 Sign Up"])
-        
-        with tab1:
-            username = st.text_input("Username", placeholder="Enter your username")
-            password = st.text_input("Password", type="password", placeholder="Enter your password")
-            if st.button("Login", use_container_width=True):
-                if verify_user(username, password):
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    create_new_chat()
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials")
-        
-        with tab2:
-            new_user = st.text_input("Username", placeholder="Choose a username")
-            new_pass = st.text_input("Password", type="password", placeholder="Choose a password")
-            if st.button("Create Account", use_container_width=True):
-                if new_user and new_pass:
-                    if len(new_pass) >= 4:
-                        if add_user(new_user, new_pass):
-                            st.success("Account created! Please login.")
-                        else:
-                            st.error("Username already exists")
+    st.markdown("<h1 style='text-align: center; color: #FF2E7E; font-family: sans-serif; font-weight: 800;'>AWAZ-E-NISA</h1>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    col_img, col_login = st.columns([1.5, 1], gap="large")
+    with col_img:
+        st.image("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=800", use_container_width=True)
+    with col_login:
+        # Mode selection before login (from old version)
+        role = st.selectbox("Operational Mode:", ["GENERAL USER (Woman)", "LEGAL PRO"])
+        t1, t2 = st.tabs(["🔑 LOGIN", "📝 SIGN UP"])
+        with t1:
+            with st.form("login"):
+                u = st.text_input("Username")
+                p = st.text_input("Password", type="password")
+                if st.form_submit_button("LOGIN", use_container_width=True):
+                    if verify_user(u, p):
+                        st.session_state.logged_in = True
+                        st.session_state.username = u
+                        st.session_state.current_mode = role
+                        st.session_state.messages = get_chat_history(u)
+                        st.rerun()
                     else:
-                        st.warning("Password must be at least 4 characters")
-                else:
-                    st.warning("Please fill all fields")
+                        st.error("Invalid credentials")
+        with t2:
+            with st.form("signup"):
+                nu = st.text_input("New Username")
+                np_ = st.text_input("New Password", type="password")
+                if st.form_submit_button("REGISTER", use_container_width=True):
+                    if nu and np_:
+                        if len(np_) >= 4:
+                            if add_user(nu, np_):
+                                st.success("Account Created! Please login.")
+                            else:
+                                st.error("Username already exists")
+                        else:
+                            st.warning("Password must be at least 4 characters")
+                    else:
+                        st.warning("Please fill all fields")
         
         if st.button("← Back to Home", use_container_width=True):
             st.session_state.show_landing = True
@@ -1077,28 +1078,16 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
 else:
     ensure_session()
 
+    # Load AI chains from legal_advisor (no mock chains)
     if "rag" not in st.session_state:
         with st.spinner("🚀 Loading AI model..."):
-            try:
-                from legal_advisor import (rag_chain, merits_chain,
-                                           opposition_chain, timeline_chain, draft_chain)
-                st.session_state.rag = rag_chain
-                st.session_state.m_chain = merits_chain
-                st.session_state.o_chain = opposition_chain
-                st.session_state.t_chain = timeline_chain
-                st.session_state.d_chain = draft_chain
-            except:
-                # Mock chains for testing
-                class MockChain:
-                    def invoke(self, q):
-                        if isinstance(q, dict):
-                            q = q.get("question", "")
-                        return f"**Legal Guidance**\n\nBased on Pakistani law: {q[:200]}..."
-                st.session_state.rag = MockChain()
-                st.session_state.m_chain = MockChain()
-                st.session_state.o_chain = MockChain()
-                st.session_state.t_chain = MockChain()
-                st.session_state.d_chain = MockChain()
+            from legal_advisor import (rag_chain, merits_chain,
+                                       opposition_chain, timeline_chain, draft_chain)
+            st.session_state.rag = rag_chain
+            st.session_state.m_chain = merits_chain
+            st.session_state.o_chain = opposition_chain
+            st.session_state.t_chain = timeline_chain
+            st.session_state.d_chain = draft_chain
 
     # ========== SIDEBAR ==========
     with st.sidebar:
@@ -1109,6 +1098,13 @@ else:
             <div style="font-size: 11px; color: #8878a8;">Voice of Women</div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Theme Switcher Button
+        is_dark = st.session_state.theme == "dark"
+        toggle_label = "☀️ Light Mode" if is_dark else "🌙 Dark Mode"
+        if st.button(toggle_label, use_container_width=True, key="theme_toggle"):
+            st.session_state.theme = "light" if is_dark else "dark"
+            st.rerun()
         
         # User info
         st.markdown(f"""
@@ -1140,10 +1136,12 @@ else:
         
         # Mode selector
         st.markdown('<span class="an-nav-label">👤 USER MODE</span>', unsafe_allow_html=True)
-        mode_options = ["👩 GENERAL USER", "⚖️ LEGAL PRO"]
+        mode_options = ["👩 GENERAL USER (Woman)", "⚖️ LEGAL PRO"]
         mode_idx = 0 if "GENERAL" in st.session_state.current_mode else 1
         mode = st.selectbox("mode_sel", mode_options, index=mode_idx, label_visibility="collapsed")
-        st.session_state.current_mode = "GENERAL USER (Woman)" if "GENERAL" in mode else "LEGAL PRO"
+        if mode != st.session_state.current_mode:
+            st.session_state.current_mode = mode
+            st.rerun()
         
         st.divider()
         
@@ -1175,10 +1173,15 @@ else:
                             full_text += extract_text_from_pdf(doc)
                         else:
                             full_text += extract_text_from_image(doc)
-                    res = st.session_state.rag.invoke(f"Analyze these documents: {full_text[:500]}")
-                    st.session_state.messages.append({"role": "assistant", "content": res})
-                    save_current_session()
-                    st.rerun()
+                    if full_text.strip():
+                        doc_query = f"Analyzed Document Content: {full_text[:500]}..."
+                        st.session_state.messages.append({"role": "user", "content": doc_query})
+                        save_chat_message(st.session_state.username, "user", doc_query, st.session_state.current_mode)
+                        
+                        res = st.session_state.rag.invoke({"question": full_text, "mode": st.session_state.current_mode})
+                        st.session_state.messages.append({"role": "assistant", "content": res})
+                        save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
+                        st.rerun()
         
         st.divider()
         
@@ -1207,6 +1210,9 @@ else:
     # ========== MAIN CONTENT ==========
     feature = st.session_state.active_feature
     
+    # Display current mode header
+    st.markdown(f"### ⚖️ {st.session_state.current_mode}")
+    
     # Voice input handler
     if 'audio' in locals() and audio and audio.get('id') != st.session_state.get('last_audio_id'):
         st.session_state.last_audio_id = audio['id']
@@ -1217,11 +1223,14 @@ else:
                 result = whisper_model.transcribe(tmp.name, language="ur", task="translate")
                 detected_text = result["text"].strip()
             if detected_text:
-                st.session_state.messages.append({"role": "user", "content": f"🎤: {detected_text}"})
+                voice_content = f"🎤: {detected_text}"
+                st.session_state.messages.append({"role": "user", "content": voice_content})
+                save_chat_message(st.session_state.username, "user", voice_content, st.session_state.current_mode)
+                
                 with st.spinner("Analyzing..."):
                     res = st.session_state.rag.invoke({"question": detected_text, "mode": st.session_state.current_mode})
                 st.session_state.messages.append({"role": "assistant", "content": res})
-                save_current_session()
+                save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
                 st.rerun()
     
     if feature == "Legal Chat":
@@ -1256,17 +1265,26 @@ else:
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"], avatar="👩" if msg["role"] == "user" else "⚖️"):
                 if msg["role"] == "assistant":
-                    st.markdown(f"<div class='mode-tag'>{st.session_state.current_mode}</div>", unsafe_allow_html=True)
+                    # Use the mode stored with the message, fallback to current mode if not present
+                    msg_mode = msg.get("mode", st.session_state.current_mode)
+                    st.markdown(f"<div class='mode-tag'>{msg_mode}</div>", unsafe_allow_html=True)
                 st.markdown(msg["content"])
+                # Show analysis panel only for assistant messages that are responses to legal queries
                 if msg["role"] == "assistant" and i > 0:
-                    prev_q = next((st.session_state.messages[j]["content"] for j in range(i-1, -1, -1) if st.session_state.messages[j]["role"] == "user"), "")
-                    if prev_q:
+                    # Find the previous user message
+                    prev_q = None
+                    for j in range(i-1, -1, -1):
+                        if st.session_state.messages[j]["role"] == "user":
+                            prev_q = st.session_state.messages[j]["content"]
+                            break
+                    if prev_q and is_legal_query(prev_q):
                         render_analysis_panel(i, prev_q)
         
         # Chat input
         if prompt := st.chat_input("Type your legal question here..."):
             st.session_state.last_query = prompt
             st.session_state.messages.append({"role": "user", "content": prompt})
+            save_chat_message(st.session_state.username, "user", prompt, st.session_state.current_mode)
             
             with st.chat_message("user", avatar="👩"):
                 st.markdown(prompt)
@@ -1276,8 +1294,9 @@ else:
                     response = st.session_state.rag.invoke({"question": prompt, "mode": st.session_state.current_mode})
                 st.markdown(f"<div class='mode-tag'>{st.session_state.current_mode}</div>", unsafe_allow_html=True)
                 st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-                save_current_session()
+                # Store the message with mode
+                st.session_state.messages.append({"role": "assistant", "content": response, "mode": st.session_state.current_mode})
+                save_chat_message(st.session_state.username, "assistant", response, st.session_state.current_mode)
                 st.rerun()
     
     elif feature == "Case Merits":
