@@ -1,13 +1,29 @@
 import os
+import streamlit as st
+from dotenv import load_dotenv
+
+# 1. SQLite Fix (Zaroori hai taake Streamlit Cloud par ChromaDB crash na kare)
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
+api_key = st.secrets.get("GOOGLE_API_KEY")
+
+# --- LangChain Imports ---
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from dotenv import load_dotenv
 
-load_dotenv()
+
+
+
+
 
 DB_PATH = "db/awaz_e_nisa_db"
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
@@ -22,7 +38,7 @@ except Exception as e:
     retriever = DummyRetriever()
 
 # --- LLM CONFIGURATION ---
-llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.1)
+llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.1,google_api_key=api_key)
 
 def retrieve_context(inputs):
     query = inputs if isinstance(inputs, str) else inputs.get("question", "")

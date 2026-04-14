@@ -1,8 +1,11 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    # Agar local machine par hain to standard sqlite3 use hoga
+    import sqlite3
 
-import sqlite3
 import hashlib
 import logging
 from datetime import datetime
