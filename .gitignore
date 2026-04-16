@@ -9,9 +9,9 @@ __pycache__/
 *.db
 *.sqlite3
 
-# --- Streamlit & OS ---
-.streamlit/config.toml
+# --- Streamlit ---
 .streamlit/secrets.toml
+.streamlit/config.toml 
 .DS_Store
 Thumbs.db
 

@@ -1213,25 +1213,41 @@ else:
     # Display current mode header
     st.markdown(f"### ⚖️ {st.session_state.current_mode}")
     
-    # Voice input handler
-    if 'audio' in locals() and audio and audio.get('id') != st.session_state.get('last_audio_id'):
+# Voice input handler
+    if audio and audio.get('id') and audio.get('id') != st.session_state.get('last_audio_id'):
         st.session_state.last_audio_id = audio['id']
         whisper_model = load_whisper_model()
-        with st.spinner("Processing voice..."):
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                tmp.write(audio['bytes'])
-                result = whisper_model.transcribe(tmp.name, language="ur", task="translate")
+        with st.spinner("🎤 Transcribing audio..."):
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                    tmp.write(audio['bytes'])
+                    tmp_path = tmp.name
+                # task="transcribe" keeps original language (Urdu script OR Roman Urdu)
+                # no language= lock so Whisper auto-detects; works for Urdu, Roman Urdu, English
+                result = whisper_model.transcribe(
+                    tmp_path,
+                    task="transcribe",
+                    fp16=False,
+                )
                 detected_text = result["text"].strip()
-            if detected_text:
-                voice_content = f"🎤: {detected_text}"
-                st.session_state.messages.append({"role": "user", "content": voice_content})
-                save_chat_message(st.session_state.username, "user", voice_content, st.session_state.current_mode)
-                
-                with st.spinner("Analyzing..."):
-                    res = st.session_state.rag.invoke({"question": detected_text, "mode": st.session_state.current_mode})
-                st.session_state.messages.append({"role": "assistant", "content": res})
-                save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
-                st.rerun()
+                os.unlink(tmp_path)
+            except Exception as e:
+                st.error(f"Voice transcription failed: {e}")
+                detected_text = ""
+
+        if detected_text:
+            voice_content = f"🎤 {detected_text}"
+            st.session_state.messages.append({"role": "user", "content": voice_content})
+            save_chat_message(st.session_state.username, "user", voice_content, st.session_state.current_mode)
+
+            with st.spinner("⚖️ Analyzing..."):
+                # Send clean text (no emoji prefix) to RAG
+                res = st.session_state.rag.invoke({"question": detected_text, "mode": st.session_state.current_mode})
+            st.session_state.messages.append({"role": "assistant", "content": res, "mode": st.session_state.current_mode})
+            save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
+            st.rerun()
+        else:
+            st.warning("No speech detected. Please speak clearly and try again.")
     
     if feature == "Legal Chat":
         st.markdown(f"""
