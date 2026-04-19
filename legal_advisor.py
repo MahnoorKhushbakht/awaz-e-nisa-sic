@@ -263,6 +263,5 @@ def draft_wrapper(query):
 
 draft_chain = RunnableLambda(draft_wrapper)
 
-# Make is_legal_query available for import
-# This line is CRITICAL - it exports the function
+
 is_legal_query = is_legal_query

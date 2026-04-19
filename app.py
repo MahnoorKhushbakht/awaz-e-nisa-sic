@@ -7,10 +7,11 @@ from PIL import Image
 import cv2
 import numpy as np
 import tempfile
+import whisper
 import warnings
 import uuid
-import whisper
 import random
+import re
 from datetime import datetime
 from fpdf import FPDF
 from database import init_db, add_user, verify_user, save_chat_message, get_chat_history, delete_chat_history
@@ -47,9 +48,13 @@ def configure_paths():
 configure_paths()
 init_db()
 
+# ============================================================
+#  WHISPER MODEL (FROM OLD APP)
+# ============================================================
 @st.cache_resource
 def load_whisper_model():
-    return whisper.load_model("small")
+    """Load Whisper model - from old app configuration"""
+    return whisper.load_model("small")  # Using "small" model like old app
 
 # ============================================================
 #  SESSION STATE DEFAULTS
@@ -67,13 +72,14 @@ defaults = {
     "username": "",
     "active_session_id": None,
     "chat_sessions": {},
+    "processing_audio": False,
 }
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
 # ============================================================
-#  DARK THEME CSS - PREMIUM HOMEPAGE DESIGN
+#  DARK THEME CSS
 # ============================================================
 dark_theme = """
 <style>
@@ -97,14 +103,12 @@ dark_theme = """
 
 .block-container { padding: 0 2rem 2rem 2rem !important; max-width: 1400px !important; margin: 0 auto !important; }
 
-/* Sidebar */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, var(--c-surface) 0%, var(--c-bg) 100%) !important;
     border-right: 1px solid var(--c-border) !important;
     width: 300px !important;
 }
 
-/* Chat Messages */
 [data-testid="stChatMessage"] {
     background: var(--c-surface) !important;
     border-radius: 20px !important;
@@ -114,7 +118,6 @@ section[data-testid="stSidebar"] {
     animation: slideIn 0.3s ease-out;
 }
 
-/* Chat Input */
 [data-testid="stChatInput"] {
     background: var(--c-surface) !important;
     border: 2px solid var(--c-border) !important;
@@ -126,7 +129,6 @@ section[data-testid="stSidebar"] {
     box-shadow: 0 0 0 3px rgba(255,46,126,0.2); 
 }
 
-/* Buttons */
 .stButton > button {
     background: linear-gradient(135deg, var(--c-pink), var(--c-purple)) !important;
     color: white !important;
@@ -140,7 +142,6 @@ section[data-testid="stSidebar"] {
     box-shadow: 0 10px 25px rgba(255,46,126,0.3); 
 }
 
-/* Headers */
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif !important;
     background: linear-gradient(135deg, var(--c-text), #c8b8ff);
@@ -149,7 +150,6 @@ h1, h2, h3, h4, h5, h6 {
     background-clip: text;
 }
 
-/* Hero Section */
 .hero-section {
     text-align: center;
     padding: 80px 24px 60px;
@@ -192,7 +192,6 @@ h1, h2, h3, h4, h5, h6 {
     -webkit-text-fill-color: transparent;
 }
 
-/* Stats Bar */
 .stats-bar {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -226,7 +225,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-top: 8px;
 }
 
-/* Feature Cards Grid */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -269,7 +267,6 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.6;
 }
 
-/* Training Data Cards */
 .training-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -316,7 +313,6 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
 }
 
-/* How It Works */
 .howit-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -355,7 +351,6 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.6;
 }
 
-/* CTA Section */
 .cta-section {
     border-radius: 32px;
     padding: 80px 48px;
@@ -382,7 +377,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-right: auto;
 }
 
-/* Footer */
 .premium-footer {
     border-top: 1px solid rgba(255,46,126,0.12);
     padding: 40px 0;
@@ -429,7 +423,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 8px;
 }
 
-/* Law Tip Box */
 .law-tip-box {
     padding: 15px;
     background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
@@ -440,17 +433,6 @@ h1, h2, h3, h4, h5, h6 {
 .tip-title { color: var(--c-pink); font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; }
 .tip-text { color: var(--c-text-muted); font-size: 13px; line-height: 1.4; }
 
-/* Emergency Box */
-.emergency-box {
-    padding: 12px;
-    background: rgba(220,38,38,0.1);
-    border: 1px solid rgba(220,38,38,0.3);
-    border-radius: 12px;
-    margin-top: 15px;
-}
-.emergency-item { color: #ff6b6b; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
-
-/* Mode Tag */
 .mode-tag {
     background: linear-gradient(90deg, var(--c-pink), var(--c-purple));
     color: white !important;
@@ -462,7 +444,6 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 12px;
 }
 
-/* Demo Questions */
 .demo-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -495,7 +476,6 @@ h1, h2, h3, h4, h5, h6 {
     line-height: 1.5;
 }
 
-/* User Card */
 .an-user-card {
     background: linear-gradient(135deg, rgba(255,46,126,0.1), rgba(138,43,226,0.1));
     border: 1px solid var(--c-border);
@@ -527,7 +507,6 @@ h1, h2, h3, h4, h5, h6 {
     display: block;
 }
 
-/* Hotlines */
 .an-hotlines {
     background: rgba(220,38,38,0.1);
     border: 1px solid rgba(220,38,38,0.3);
@@ -551,7 +530,6 @@ h1, h2, h3, h4, h5, h6 {
 .an-hotline-label { font-size: 12px; color: var(--c-text-muted); }
 .an-hotline-num { font-size: 12px; color: var(--c-red-alert); font-weight: 700; }
 
-/* Section Header */
 .an-section-header {
     background: linear-gradient(135deg, rgba(255,46,126,0.08), rgba(138,43,226,0.08));
     border: 1px solid var(--c-border);
@@ -567,30 +545,12 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     font-family: 'Playfair Display', serif;
 }
-.an-mode-chip {
-    background: rgba(255,46,126,0.2);
-    color: #ffa0c0 !important;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
-}
 
-/* Animations */
 @keyframes slideIn {
     from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
 }
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--c-surface); }
 ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, var(--c-pink), var(--c-purple)); border-radius: 10px; }
@@ -696,14 +656,60 @@ h1, h2, h3, h4, h5, h6 {
     padding: 15px; background: linear-gradient(135deg, #f0ecfc 0%, #faf7ff 100%);
     border-left: 4px solid var(--c-pink); border-radius: 12px;
 }
-.emergency-box {
-    padding: 12px; background: rgba(220,38,38,0.06);
-    border: 1px solid rgba(220,38,38,0.2); border-radius: 12px;
-}
 .demo-question {
     background: var(--c-surface2); border: 1px solid var(--c-border); border-radius: 12px; padding: 14px;
 }
 .demo-question:hover { border-color: var(--c-pink); background: rgba(212,26,104,0.03); }
+.an-user-card {
+    background: linear-gradient(135deg, rgba(212,26,104,0.07), rgba(107,33,200,0.07));
+    border: 1px solid var(--c-border);
+    border-radius: 12px; padding: 14px; margin: 16px 0;
+    display: flex; align-items: center; gap: 12px;
+}
+.an-avatar {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--c-pink), var(--c-purple));
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; font-weight: 700; color: white !important;
+}
+.an-nav-label {
+    font-size: 11px; color: var(--c-pink); text-transform: uppercase;
+    letter-spacing: 1px; font-weight: 700; margin: 20px 0 12px; display: block;
+}
+.an-section-header {
+    background: linear-gradient(135deg, rgba(212,26,104,0.05), rgba(107,33,200,0.05));
+    border: 1px solid var(--c-border); border-radius: 18px;
+    padding: 20px 24px; margin-bottom: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.an-feature-title { font-size: 20px; font-weight: 700; font-family: 'Playfair Display', serif; }
+.mode-tag {
+    background: linear-gradient(90deg, var(--c-pink), var(--c-purple));
+    color: white !important; padding: 4px 12px; border-radius: 15px;
+    font-size: 10px; font-weight: 700; display: inline-block; margin-bottom: 12px;
+}
+.an-hotlines {
+    background: rgba(220,38,38,0.06);
+    border: 1px solid rgba(220,38,38,0.2);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 20px;
+}
+.an-hotlines-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-red-alert);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+.an-hotline-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(220,38,38,0.08);
+}
+.an-hotline-label { font-size: 12px; color: var(--c-text-muted); }
+.an-hotline-num { font-size: 12px; color: var(--c-red-alert); font-weight: 700; }
 </style>
 """
 
@@ -764,7 +770,7 @@ def create_new_chat():
     if "chat_sessions" not in st.session_state:
         st.session_state.chat_sessions = {}
     st.session_state.chat_sessions[sid] = {
-        "title": "💬 New conversation",
+        "title": " New conversation",
         "messages": [],
         "ts": datetime.now().strftime("%H:%M"),
     }
@@ -778,48 +784,59 @@ def ensure_session():
     if not st.session_state.active_session_id:
         create_new_chat()
 
-# Deep Analysis Panel - ONLY shows for legal queries
+def clean_text(text):
+    text = text.lower().strip()
+    replacements = {
+        "kula": "khula",
+        "khulaa": "khula",
+        "talaq": "divorce",
+        "shaadi": "marriage",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    return text
+
+# Deep Analysis Panel
 @st.fragment
 def render_analysis_panel(msg_index, original_query):
-    # Check if this is a legal query - if not, don't show any analysis tools
     if not is_legal_query(original_query):
-        return  # Exit immediately, show nothing
-    
+        return
+
     panel_key = f"panel_{msg_index}"
     if panel_key not in st.session_state.expanded_panels:
         st.session_state.expanded_panels[panel_key] = {
             "merits": False, "opposition": False, "timeline": False, "draft": False,
             "merits_res": None, "opp_res": None, "time_res": None, "draft_res": None
         }
-    
+
     panel = st.session_state.expanded_panels[panel_key]
     st.markdown('<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--c-border);">', unsafe_allow_html=True)
     st.markdown("<p style='color:#888; font-size:11px; font-weight:bold; letter-spacing:1px;'>🔍 DEEP ANALYSIS TOOLS</p>", unsafe_allow_html=True)
-    
+
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        if st.button("✅ Case Merits", key=f"m_{msg_index}", use_container_width=True):
+        if st.button(" Case Merits", key=f"m_{msg_index}", use_container_width=True):
             if not panel["merits_res"]:
                 with st.spinner("Analyzing..."):
                     panel["merits_res"] = st.session_state.m_chain.invoke(original_query)
             panel["merits"] = not panel["merits"]
             st.rerun()
     with col2:
-        if st.button("⚔ Opposition", key=f"o_{msg_index}", use_container_width=True):
+        if st.button(" Opposition", key=f"o_{msg_index}", use_container_width=True):
             if not panel["opp_res"]:
                 with st.spinner("Analyzing..."):
                     panel["opp_res"] = st.session_state.o_chain.invoke(original_query)
             panel["opposition"] = not panel["opposition"]
             st.rerun()
     with col3:
-        if st.button("📅 Timeline", key=f"t_{msg_index}", use_container_width=True):
+        if st.button(" Timeline", key=f"t_{msg_index}", use_container_width=True):
             if not panel["time_res"]:
                 with st.spinner("Analyzing..."):
                     panel["time_res"] = st.session_state.t_chain.invoke(original_query)
             panel["timeline"] = not panel["timeline"]
             st.rerun()
     with col4:
-        if st.button("📄 Draft", key=f"d_{msg_index}", use_container_width=True):
+        if st.button(" Draft", key=f"d_{msg_index}", use_container_width=True):
             if not panel["draft_res"]:
                 with st.spinner("Generating..."):
                     panel["draft_res"] = st.session_state.d_chain.invoke(original_query)
@@ -837,12 +854,12 @@ def render_analysis_panel(msg_index, original_query):
         pdf_path = create_pdf(panel["draft_res"])
         with open(pdf_path, "rb") as f:
             st.download_button("⬇️ Download PDF", f, file_name=f"legal_draft_{msg_index}.pdf", key=f"dl_{msg_index}", use_container_width=True)
-    
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 HOTLINES_HTML = """
 <div class="an-hotlines">
-    <div class="an-hotlines-title">🆘 EMERGENCY HELPLINES</div>
+    <div class="an-hotlines-title"> EMERGENCY HELPLINES</div>
     <div class="an-hotline-row"><span class="an-hotline-label">🚨 FIA Cybercrime</span><span class="an-hotline-num">1991</span></div>
     <div class="an-hotline-row"><span class="an-hotline-label">⚖️ Ministry of Human Rights</span><span class="an-hotline-num">1099</span></div>
     <div class="an-hotline-row"><span class="an-hotline-label">👮 Women Safety (Police)</span><span class="an-hotline-num">15</span></div>
@@ -860,24 +877,18 @@ LEGAL_TIPS = [
 ]
 
 FEATURES = {
-    "⚡ Legal Chat": "Legal Chat",
-    "📊 Case Merits": "Case Merits",
-    "⚔ Counter Arguments": "Counter Arguments",
-    "📅 Timeline Estimator": "Timeline Estimator",
-    "📄 Legal Draft": "Legal Draft",
-    "🌸 About": "About",
-}
-
-FEATURE_ICONS = {
-    "Legal Chat": "⚡", "Case Merits": "📊", "Counter Arguments": "⚔",
-    "Timeline Estimator": "📅", "Legal Draft": "📄", "About": "🌸",
+    " Legal Chat": "Legal Chat",
+    " Case Merits": "Case Merits",
+    " Counter Arguments": "Counter Arguments",
+    " Timeline Estimator": "Timeline Estimator",
+    " Legal Draft": "Legal Draft",
+    " About": "About",
 }
 
 # ============================================================
-#  LANDING PAGE - PREMIUM VERSION
+#  LANDING PAGE
 # ============================================================
 if not st.session_state.logged_in and st.session_state.show_landing:
-    # Hero Section
     st.markdown("""
     <div class="hero-section">
         <div class="hero-badge">
@@ -894,22 +905,20 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Hero Buttons
+
     col1, col2, col3, col4 = st.columns([1, 1.2, 1.2, 1])
     with col2:
-        if st.button("🚀 Start Free Consultation", use_container_width=True, key="hero_start"):
+        if st.button(" Start Free Consultation", use_container_width=True, key="hero_start"):
             st.session_state.show_landing = False
             st.rerun()
     with col3:
-        if st.button("👤 Try as Guest", use_container_width=True, key="hero_guest"):
+        if st.button(" Try as Guest", use_container_width=True, key="hero_guest"):
             st.session_state.logged_in = True
             st.session_state.username = "Guest"
             st.session_state.show_landing = False
             create_new_chat()
             st.rerun()
-    
-    # Stats Bar
+
     st.markdown("""
     <div class="stats-bar">
         <div class="stat-item"><div class="stat-number">164</div><div class="stat-label">Law Documents</div></div>
@@ -919,8 +928,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         <div class="stat-item"><div class="stat-number">24/7</div><div class="stat-label">Availability</div></div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Features Section
+
     st.markdown("""
     <div style="text-align:center; margin-bottom:20px;">
         <div style="display:inline-block;background:rgba(255,46,126,0.12);border:1px solid rgba(255,46,126,0.28);color:#ff7ab8;padding:6px 18px;border-radius:24px;font-size:12px;font-weight:700;text-transform:uppercase;">✦ Features</div>
@@ -928,7 +936,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         <p style="color:#8878a8;max-width:560px;margin:0 auto;">From instant legal Q&amp;A to professional court documents — all powered by AI trained on Pakistani law.</p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     features_data = [
         ("⚡", "Instant Legal Chat", "Ask in Urdu or English. Get cited answers with section numbers from MFLO, PECA, and more."),
         ("📊", "Case Merits Analysis", "Understand legal strengths and weaknesses of your case before approaching a lawyer."),
@@ -937,7 +945,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         ("📄", "Legal Draft Generator", "Generate Khula petitions, custody applications, and police complaints as PDF."),
         ("📎", "Document Analysis", "Upload Nikah Nama or court notices — AI explains what it means for you."),
     ]
-    
+
     cols = st.columns(3)
     for i, (icon, title, desc) in enumerate(features_data):
         with cols[i % 3]:
@@ -949,8 +957,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
             </div>
             """, unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Training Data Section
+
     st.markdown("""
     <div style="margin:60px 0;background:rgba(138,43,226,0.05);border-radius:32px;padding:48px 36px;">
         <div style="text-align:center; margin-bottom:30px;">
@@ -966,8 +973,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # How It Works Section
+
     st.markdown("""
     <div style="margin:60px 0;">
         <div style="text-align:center; margin-bottom:30px;">
@@ -983,29 +989,27 @@ if not st.session_state.logged_in and st.session_state.show_landing:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    # CTA Section
+
     st.markdown("""
     <div class="cta-section">
         <div class="cta-title">Your Voice. Your Rights. Your Law.</div>
         <div class="cta-text">Join thousands of Pakistani women who've used Awaz-e-Nisa to understand their legal rights.</div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     col1, col2, col3, col4 = st.columns([1, 1.2, 1.2, 1])
     with col2:
-        if st.button("⚖️ Get Started Free", use_container_width=True, key="cta_start"):
+        if st.button(" Get Started Free", use_container_width=True, key="cta_start"):
             st.session_state.show_landing = False
             st.rerun()
     with col3:
-        if st.button("👀 Try as Guest", use_container_width=True, key="cta_guest"):
+        if st.button(" Try as Guest", use_container_width=True, key="cta_guest"):
             st.session_state.logged_in = True
             st.session_state.username = "Guest"
             st.session_state.show_landing = False
             create_new_chat()
             st.rerun()
-    
-    # Footer
+
     st.markdown("""
     <div class="premium-footer">
         <div class="footer-logo">
@@ -1027,7 +1031,7 @@ if not st.session_state.logged_in and st.session_state.show_landing:
     """, unsafe_allow_html=True)
 
 # ============================================================
-#  LOGIN PAGE (UPDATED WITH OLD LOGIC)
+#  LOGIN PAGE
 # ============================================================
 elif not st.session_state.logged_in and not st.session_state.show_landing:
     st.markdown("<h1 style='text-align: center; color: #FF2E7E; font-family: sans-serif; font-weight: 800;'>AWAZ-E-NISA</h1>", unsafe_allow_html=True)
@@ -1036,9 +1040,8 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
     with col_img:
         st.image("https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=800", use_container_width=True)
     with col_login:
-        # Mode selection before login (from old version)
         role = st.selectbox("Operational Mode:", ["GENERAL USER (Woman)", "LEGAL PRO"])
-        t1, t2 = st.tabs(["🔑 LOGIN", "📝 SIGN UP"])
+        t1, t2 = st.tabs([" LOGIN", " SIGN UP"])
         with t1:
             with st.form("login"):
                 u = st.text_input("Username")
@@ -1067,7 +1070,7 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
                             st.warning("Password must be at least 4 characters")
                     else:
                         st.warning("Please fill all fields")
-        
+
         if st.button("← Back to Home", use_container_width=True):
             st.session_state.show_landing = True
             st.rerun()
@@ -1078,9 +1081,8 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
 else:
     ensure_session()
 
-    # Load AI chains from legal_advisor (no mock chains)
     if "rag" not in st.session_state:
-        with st.spinner("🚀 Loading AI model..."):
+        with st.spinner(" Loading AI model..."):
             from legal_advisor import (rag_chain, merits_chain,
                                        opposition_chain, timeline_chain, draft_chain)
             st.session_state.rag = rag_chain
@@ -1098,15 +1100,13 @@ else:
             <div style="font-size: 11px; color: #8878a8;">Voice of Women</div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Theme Switcher Button
+
         is_dark = st.session_state.theme == "dark"
         toggle_label = "☀️ Light Mode" if is_dark else "🌙 Dark Mode"
         if st.button(toggle_label, use_container_width=True, key="theme_toggle"):
             st.session_state.theme = "light" if is_dark else "dark"
             st.rerun()
-        
-        # User info
+
         st.markdown(f"""
         <div class="an-user-card">
             <div class="an-avatar">{st.session_state.username[0].upper()}</div>
@@ -1116,8 +1116,7 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Law Tip
+
         tip_title, tip_content = random.choice(LEGAL_TIPS)
         st.markdown(f"""
         <div class="law-tip-box">
@@ -1125,45 +1124,75 @@ else:
             <div class="tip-text">{tip_content}</div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # ============================================================
+        #  VOICE INPUT — USING WHISPER (FROM OLD APP CONFIGURATION)
+        # ============================================================
+        st.markdown('<span class="an-nav-label"> VOICE COMMAND</span>', unsafe_allow_html=True)
+        audio = mic_recorder(start_prompt=" Start Speaking", stop_prompt="⏹️ Stop", key="recorder", just_once=True, use_container_width=True)
+
+        if audio and not st.session_state.processing_audio:
+            if audio.get("id") != st.session_state.last_audio_id:
+                st.session_state.last_audio_id = audio.get("id")
+                st.session_state.processing_audio = True
+                with st.spinner("🎤 Transcribing..."):
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+                        tmp.write(audio["bytes"])
+                        tmp_path = tmp.name
+                    
+                    res = load_whisper_model().transcribe(
+                        tmp_path, language="en", 
+                        initial_prompt="Harassment, Khula, Divorce, Roman Urdu, Pakistani Law.",
+                        fp16=False, no_speech_threshold=0.6
+                    )
+                    raw_text = res["text"].strip()
+                    
+                  
+                    clean_q = re.sub(r'[^a-zA-Z0-9\s\.,\?!]', '', raw_text)
+                    
+                    # Filter Hallucinations
+                    if len(clean_q) > 5 and not any(x in clean_q.lower() for x in ["have a nice night", "thank you"]):
+                        st.session_state.messages.append({"role": "user", "content": clean_q})
+                        ans = st.session_state.rag.invoke({"question": clean_q, "mode": st.session_state.current_mode})
+                        st.session_state.messages.append({"role": "assistant", "content": ans, "mode": st.session_state.current_mode})
+                        save_chat_message(st.session_state.username, "user", clean_q, st.session_state.current_mode)
+                        save_chat_message(st.session_state.username, "assistant", ans, st.session_state.current_mode)
+                    else:
+                        st.warning("Unclear audio, try again.")
+                    
+                    st.session_state.processing_audio = False
+                    os.remove(tmp_path); st.rerun()
         
         st.divider()
-        
-        # Voice Input
-        st.markdown('<span class="an-nav-label">🎤 VOICE COMMAND</span>', unsafe_allow_html=True)
-        audio = mic_recorder(key="mic", start_prompt="🎤 Start Speaking", stop_prompt="⏹️ Stop", just_once=True, use_container_width=True)
-        
-        st.divider()
-        
-        # Mode selector
+
         st.markdown('<span class="an-nav-label">👤 USER MODE</span>', unsafe_allow_html=True)
-        mode_options = ["👩 GENERAL USER (Woman)", "⚖️ LEGAL PRO"]
+        mode_options = [" GENERAL USER (Woman)", " LEGAL PRO"]
         mode_idx = 0 if "GENERAL" in st.session_state.current_mode else 1
         mode = st.selectbox("mode_sel", mode_options, index=mode_idx, label_visibility="collapsed")
         if mode != st.session_state.current_mode:
             st.session_state.current_mode = mode
             st.rerun()
-        
+
         st.divider()
-        
-        # New Chat button
+
         if st.button("✨ New Chat", use_container_width=True):
             save_current_session()
             create_new_chat()
             st.rerun()
-        
-        # Feature navigation
+
         st.markdown('<span class="an-nav-label">🎯 FEATURES</span>', unsafe_allow_html=True)
         for label, key in FEATURES.items():
             if st.button(label, use_container_width=True, key=f"nav_{key}"):
                 st.session_state.active_feature = key
                 st.rerun()
-        
+
         st.divider()
-        
-        # Document Upload
+
         st.markdown('<span class="an-nav-label">📎 DOCUMENT UPLOAD</span>', unsafe_allow_html=True)
         uploaded_docs = st.file_uploader("Upload", type=['pdf','png','jpg','jpeg'], accept_multiple_files=True, label_visibility="collapsed")
-        
+
         if uploaded_docs:
             if st.button("🔍 Analyze Documents", use_container_width=True):
                 with st.spinner("Processing..."):
@@ -1177,78 +1206,38 @@ else:
                         doc_query = f"Analyzed Document Content: {full_text[:500]}..."
                         st.session_state.messages.append({"role": "user", "content": doc_query})
                         save_chat_message(st.session_state.username, "user", doc_query, st.session_state.current_mode)
-                        
+
                         res = st.session_state.rag.invoke({"question": full_text, "mode": st.session_state.current_mode})
                         st.session_state.messages.append({"role": "assistant", "content": res})
                         save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
                         st.rerun()
-        
+
         st.divider()
-        
-        # Clear chat
-        if st.button("🗑️ Clear Chat", use_container_width=True):
+
+        if st.button(" Clear Chat", use_container_width=True):
             st.session_state.messages = []
             save_current_session()
             st.rerun()
-        
-        # Logout
-        if st.button("🚪 Logout", use_container_width=True):
+
+        if st.button(" Logout", use_container_width=True):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
-        
-        # Emergency Hotlines
+
         st.markdown(HOTLINES_HTML, unsafe_allow_html=True)
-        
+
         st.markdown("""
         <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,46,126,0.15); text-align: center;">
             <div style="font-size: 10px; color: #604878;">🚀 Samsung Innovation Campus</div>
             <div style="font-size: 9px; color: #604878;">© 2026 Awaz-e-Nisa</div>
         </div>
         """, unsafe_allow_html=True)
-    
+
     # ========== MAIN CONTENT ==========
     feature = st.session_state.active_feature
-    
-    # Display current mode header
+
     st.markdown(f"### ⚖️ {st.session_state.current_mode}")
-    
-# Voice input handler
-    if audio and audio.get('id') and audio.get('id') != st.session_state.get('last_audio_id'):
-        st.session_state.last_audio_id = audio['id']
-        whisper_model = load_whisper_model()
-        with st.spinner("🎤 Transcribing audio..."):
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                    tmp.write(audio['bytes'])
-                    tmp_path = tmp.name
-                # task="transcribe" keeps original language (Urdu script OR Roman Urdu)
-                # no language= lock so Whisper auto-detects; works for Urdu, Roman Urdu, English
-                result = whisper_model.transcribe(
-                    tmp_path,
-                    task="transcribe",
-                    fp16=False,
-                )
-                detected_text = result["text"].strip()
-                os.unlink(tmp_path)
-            except Exception as e:
-                st.error(f"Voice transcription failed: {e}")
-                detected_text = ""
 
-        if detected_text:
-            voice_content = f"🎤 {detected_text}"
-            st.session_state.messages.append({"role": "user", "content": voice_content})
-            save_chat_message(st.session_state.username, "user", voice_content, st.session_state.current_mode)
-
-            with st.spinner("⚖️ Analyzing..."):
-                # Send clean text (no emoji prefix) to RAG
-                res = st.session_state.rag.invoke({"question": detected_text, "mode": st.session_state.current_mode})
-            st.session_state.messages.append({"role": "assistant", "content": res, "mode": st.session_state.current_mode})
-            save_chat_message(st.session_state.username, "assistant", res, st.session_state.current_mode)
-            st.rerun()
-        else:
-            st.warning("No speech detected. Please speak clearly and try again.")
-    
     if feature == "Legal Chat":
         st.markdown(f"""
         <div class="an-section-header">
@@ -1258,7 +1247,7 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         if not st.session_state.messages:
             st.markdown("""
             <div style="text-align: center; padding: 40px 20px;">
@@ -1267,27 +1256,23 @@ else:
                 <p style="color: #8878a8;">Your AI legal assistant for Pakistani law. Ask me anything about your legal rights.</p>
             </div>
             """, unsafe_allow_html=True)
-            
+
             st.markdown("""
             <div class="demo-grid">
                 <div class="demo-question"><div class="demo-category">Family Law</div><div class="demo-text">My husband married a second woman. What are my rights?</div></div>
                 <div class="demo-question"><div class="demo-category">Child Custody</div><div class="demo-text">Can my ex-husband take our children away from me?</div></div>
                 <div class="demo-question"><div class="demo-category">Financial Rights</div><div class="demo-text">How much maintenance can I claim for my children?</div></div>
-                <div class="demo-question"><div class="demo-category">Cybercrime</div><div class="demo-text">Someone is blackmailing me online. What should I do?</div></div>
+                <div class="demo-question"><div class="demo-category">Khula</div><div class="demo-text">Khula lene ka kya tareeqa hai?</div></div>
             </div>
             """, unsafe_allow_html=True)
-        
-        # Display messages
+
         for i, msg in enumerate(st.session_state.messages):
             with st.chat_message(msg["role"], avatar="👩" if msg["role"] == "user" else "⚖️"):
                 if msg["role"] == "assistant":
-                    # Use the mode stored with the message, fallback to current mode if not present
                     msg_mode = msg.get("mode", st.session_state.current_mode)
                     st.markdown(f"<div class='mode-tag'>{msg_mode}</div>", unsafe_allow_html=True)
                 st.markdown(msg["content"])
-                # Show analysis panel only for assistant messages that are responses to legal queries
                 if msg["role"] == "assistant" and i > 0:
-                    # Find the previous user message
                     prev_q = None
                     for j in range(i-1, -1, -1):
                         if st.session_state.messages[j]["role"] == "user":
@@ -1295,26 +1280,24 @@ else:
                             break
                     if prev_q and is_legal_query(prev_q):
                         render_analysis_panel(i, prev_q)
-        
-        # Chat input
+
         if prompt := st.chat_input("Type your legal question here..."):
             st.session_state.last_query = prompt
             st.session_state.messages.append({"role": "user", "content": prompt})
             save_chat_message(st.session_state.username, "user", prompt, st.session_state.current_mode)
-            
+
             with st.chat_message("user", avatar="👩"):
                 st.markdown(prompt)
-            
+
             with st.chat_message("assistant", avatar="⚖️"):
                 with st.spinner("Analyzing..."):
                     response = st.session_state.rag.invoke({"question": prompt, "mode": st.session_state.current_mode})
                 st.markdown(f"<div class='mode-tag'>{st.session_state.current_mode}</div>", unsafe_allow_html=True)
                 st.markdown(response)
-                # Store the message with mode
                 st.session_state.messages.append({"role": "assistant", "content": response, "mode": st.session_state.current_mode})
                 save_chat_message(st.session_state.username, "assistant", response, st.session_state.current_mode)
                 st.rerun()
-    
+
     elif feature == "Case Merits":
         st.markdown(f"""
         <div class="an-section-header">
@@ -1336,7 +1319,7 @@ else:
         if st.button("← Back to Chat", use_container_width=True):
             st.session_state.active_feature = "Legal Chat"
             st.rerun()
-    
+
     elif feature == "Counter Arguments":
         st.markdown(f"""
         <div class="an-section-header">
@@ -1358,7 +1341,7 @@ else:
         if st.button("← Back to Chat", use_container_width=True):
             st.session_state.active_feature = "Legal Chat"
             st.rerun()
-    
+
     elif feature == "Timeline Estimator":
         st.markdown(f"""
         <div class="an-section-header">
@@ -1380,7 +1363,7 @@ else:
         if st.button("← Back to Chat", use_container_width=True):
             st.session_state.active_feature = "Legal Chat"
             st.rerun()
-    
+
     elif feature == "Legal Draft":
         st.markdown(f"""
         <div class="an-section-header">
@@ -1407,7 +1390,7 @@ else:
         if st.button("← Back to Chat", use_container_width=True):
             st.session_state.active_feature = "Legal Chat"
             st.rerun()
-    
+
     elif feature == "About":
         st.markdown("""
         <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,rgba(255,46,126,0.08),rgba(138,43,226,0.08));border-radius:24px;margin-bottom:30px;">
@@ -1416,7 +1399,7 @@ else:
             <p style="color:#8878a8;">آوازِ نسواں — "Voice of Women"</p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         st.markdown("""
         <div style="background:rgba(255,46,126,0.05);border-radius:20px;padding:30px;margin-bottom:20px;">
             <h3>Our Mission</h3>
@@ -1434,7 +1417,7 @@ else:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         if st.button("← Back to Chat", use_container_width=True):
             st.session_state.active_feature = "Legal Chat"
             st.rerun()
