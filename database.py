@@ -1,10 +1,12 @@
 try:
-    __import__('pysqlite3')
+    import pysqlite3 as sqlite3
     import sys
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 except ImportError:
-    # Agar local machine par hain to standard sqlite3 use hoga
     import sqlite3
+
+# Now, ensure sqlite3 is definitely available to the rest of the script
+import sqlite3
 
 import hashlib
 import logging

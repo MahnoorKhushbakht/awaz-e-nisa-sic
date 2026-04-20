@@ -20,3 +20,4 @@ streamlit
 langchain
 langchain-chroma
 chromadb
+pysqlite3-binary
