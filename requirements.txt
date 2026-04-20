@@ -16,3 +16,7 @@ openai-whisper
 streamlit-mic-recorder
 fpdf
 python-dotenv
+streamlit
+langchain
+langchain-chroma
+chromadb
