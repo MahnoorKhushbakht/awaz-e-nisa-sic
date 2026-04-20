@@ -5,7 +5,7 @@ try:
 except ImportError:
     import sqlite3
 
-# Now, ensure sqlite3 is definitely available to the rest of the script
+
 import sqlite3
 
 import hashlib
