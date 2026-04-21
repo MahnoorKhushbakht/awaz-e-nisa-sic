@@ -19,7 +19,7 @@ from streamlit_mic_recorder import mic_recorder
 from legal_advisor import is_legal_query
 
 # ============================================================
-#  CONFIGURATION 
+#  CONFIGURATION (MUST BE FIRST)
 # ============================================================
 st.set_page_config(
     page_title="Awaz-e-Nisa | Legal AI for Pakistani Women",
@@ -49,12 +49,12 @@ configure_paths()
 init_db()
 
 # ============================================================
-#  WHISPER MODEL 
+#  WHISPER MODEL (FROM OLD APP)
 # ============================================================
 @st.cache_resource
 def load_whisper_model():
     """Load Whisper model - from old app configuration"""
-    return whisper.load_model("small") 
+    return whisper.load_model("small")  # Using "small" model like old app
 
 # ============================================================
 #  SESSION STATE DEFAULTS
@@ -1032,6 +1032,146 @@ else:
     st.markdown(light_theme, unsafe_allow_html=True)
 
 # ============================================================
+#  MOBILE RESPONSIVE CSS
+# ============================================================
+st.markdown("""
+<style>
+@media (max-width: 768px) {
+
+    /* ── CORE LAYOUT ── */
+    .block-container {
+        padding: 0 1rem 2rem 1rem !important;
+    }
+
+    /* ── VIEWPORT META (Streamlit doesn't inject this) ── */
+    * { -webkit-text-size-adjust: 100%; }
+
+    /* ── SIDEBAR: collapse-friendly ── */
+    section[data-testid="stSidebar"] {
+        width: 100% !important;
+    }
+
+    /* ── HERO ── */
+    .hero-section {
+        padding: 48px 16px 40px !important;
+    }
+    .hero-title {
+        font-size: clamp(36px, 9vw, 56px) !important;
+        line-height: 1.12 !important;
+    }
+    .hero-subtitle {
+        font-size: 15px !important;
+    }
+
+    /* ── STATS BAR: 2 cols on mobile ── */
+    .stats-bar {
+        grid-template-columns: repeat(2, 1fr) !important;
+        margin: 24px 0 !important;
+    }
+    .stat-item { padding: 22px 12px !important; }
+    .stat-number { font-size: 32px !important; }
+    .stat-item::after { display: none !important; }
+
+    /* ── FEATURES: 1 col ── */
+    .features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        margin: 20px 0 !important;
+    }
+    .feature-card { padding: 24px 20px !important; }
+
+    /* ── TRAINING: 1 col ── */
+    .training-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+    .training-card { padding: 24px 20px !important; }
+    .training-number { font-size: 40px !important; }
+
+    /* ── HOW IT WORKS: 2 col ── */
+    .howit-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+    .howit-card { padding: 22px 14px !important; }
+
+    /* ── CTA ── */
+    .cta-section {
+        padding: 48px 24px !important;
+    }
+    .cta-title { font-size: 32px !important; }
+    .cta-text  { font-size: 14px !important; }
+
+    /* ── FOOTER ── */
+    .premium-footer {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+        padding: 28px 0 !important;
+    }
+    .footer-links {
+        gap: 16px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* ── LOGIN PAGE ── */
+    .block-container { padding: 0 0.75rem 2rem !important; }
+
+    /* ── DEMO GRID: 1 col ── */
+    .demo-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    /* ── SECTION HEADER ── */
+    .an-section-header {
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+    }
+    .an-feature-title { font-size: 18px !important; }
+
+    /* ── CHAT MESSAGES ── */
+    [data-testid="stChatMessage"] {
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+    }
+
+    /* ── ANALYSIS PANEL: 2 col ── */
+    [data-testid="stChatMessage"] [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+    }
+
+    /* ── BUTTONS ── */
+    .stButton > button {
+        font-size: 12px !important;
+        padding: 9px 14px !important;
+    }
+
+    /* ── HEADINGS ── */
+    h2 { font-size: 26px !important; }
+    h3 { font-size: 22px !important; }
+}
+
+@media (max-width: 480px) {
+    .hero-title { font-size: 32px !important; }
+    .stats-bar  { grid-template-columns: repeat(2, 1fr) !important; }
+    .howit-grid { grid-template-columns: 1fr !important; }
+    .cta-title  { font-size: 26px !important; }
+
+    /* login center col fills screen */
+    [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child,
+    [data-testid="stHorizontalBlock"] > [data-testid="column"]:last-child {
+        display: none !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
+        width: 100% !important;
+        flex: 1 !important;
+    }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ============================================================
 #  HELPER FUNCTIONS
 # ============================================================
 def create_pdf(text, title="Legal Document"):
@@ -1354,7 +1494,7 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
     [data-testid="column"] { padding: 0 !important; gap: 0 !important; }
     [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
-
+    /* ════ LEFT PANEL ════ */
     .lp-left {
         min-height: 100vh;
         background: linear-gradient(160deg, #0f0c1e 0%, #160e28 40%, #0c0a18 100%);
@@ -1419,7 +1559,7 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
         letter-spacing:1.2px; text-transform:uppercase;
     }
 
-
+    /* ════ RIGHT PANEL ════ */
     .lp-right {
         min-height: 100vh;
         background: #06050e;
@@ -1456,7 +1596,7 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
     </style>
     """, unsafe_allow_html=True)
 
-
+    # ── centered single column ──
     _, center_col, _ = st.columns([1, 1.4, 1])
 
     with center_col:
@@ -1575,7 +1715,7 @@ else:
         st.divider()
 
         # ============================================================
-        #  VOICE INPUT — USING WHISPER 
+        #  VOICE INPUT — USING WHISPER (FROM OLD APP CONFIGURATION)
         # ============================================================
         st.markdown('<span class="an-nav-label"> VOICE COMMAND</span>', unsafe_allow_html=True)
         audio = mic_recorder(start_prompt=" Start Speaking", stop_prompt="⏹️ Stop", key="recorder", just_once=True, use_container_width=True)
