@@ -19,10 +19,30 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+from huggingface_hub import snapshot_download
 
-DB_PATH = "db/awaz_e_nisa_db"
+
+@st.cache_resource(show_spinner=False)
+def get_vectorstore():
+    repo_id = "mahnoor24/Awaz-e-Nisa-Index"
+    try:
+        db_path = snapshot_download(
+            repo_id=repo_id,
+            repo_type="dataset",
+            token=st.secrets["HF_TOKEN"],
+            local_dir="./chroma_db"
+        )
+        return db_path
+    except Exception as e:
+        st.error(f"Hugging Face download failed: {e}")
+        return None
+
+
+DB_PATH = get_vectorstore()
+
+# DB_PATH = "db/awaz_e_nisa_db"
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
+DB_PATH = get_vectorstore()
 try:
     vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5}) 
