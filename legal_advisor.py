@@ -24,13 +24,14 @@ from huggingface_hub import snapshot_download
 
 @st.cache_resource(show_spinner=False)
 def get_vectorstore():
-    repo_id = "mahnoor24/Awaz-e-Nisa-Index"
+    repo_id = "mahnoor24/Awaz-e-Nisa-Dataset"
     try:
         db_path = snapshot_download(
             repo_id=repo_id,
             repo_type="dataset",
             token=st.secrets["HF_TOKEN"],
-            local_dir="./chroma_db"
+            local_dir="./chroma_db",
+            resume_download=True
         )
         return db_path
     except Exception as e:

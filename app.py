@@ -66,7 +66,7 @@ defaults = {
     "current_mode": "GENERAL USER (Woman)",
     "active_feature": "Legal Chat",
     "last_query": "",
-    "theme": "dark",
+    "theme": "light",
     "expanded_panels": {},
     "last_audio_id": None,
     "username": "",
@@ -216,7 +216,6 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600 !important;
     letter-spacing: -0.01em !important;
     color: var(--c-text) !important;
-    -webkit-text-fill-color: var(--c-text) !important;
     background: none !important;
     -webkit-background-clip: unset !important;
     background-clip: unset !important;
@@ -866,7 +865,6 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 600 !important;
     color: var(--c-text) !important;
     background: none !important;
-    -webkit-text-fill-color: var(--c-text) !important;
 }
 
 [data-baseweb="select"] > div {
@@ -1032,133 +1030,261 @@ else:
     st.markdown(light_theme, unsafe_allow_html=True)
 
 # ============================================================
-#  MOBILE RESPONSIVE CSS
+#  GLOBAL POLISH + MOBILE RESPONSIVE CSS
 # ============================================================
 st.markdown("""
 <style>
+/* ═══════════════════════════════════════
+   GLOBAL POLISH (all screen sizes)
+═══════════════════════════════════════ */
+
+/* ── Fix ⚖️ emoji: force native color rendering ── */
+.sidebar-logo-emoji,
+.login-logo-emoji,
+.hero-logo-emoji,
+.chat-logo-emoji {
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif !important;
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    color: initial !important;
+}
+
+/* Force ALL emoji-only spans to render with color */
+[style*="font-size:44px"],
+[style*="font-size: 44px"],
+[style*="font-size:48px"],
+[style*="font-size: 48px"],
+[style*="font-size:60px"],
+[style*="font-size: 60px"],
+[style*="font-size:64px"],
+[style*="font-size: 64px"],
+[style*="font-size:72px"],
+[style*="font-size: 72px"],
+[style*="font-size:52px"],
+[style*="font-size: 52px"] {
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+}
+
+/* ── CHAT interface polish ── */
+[data-testid="stChatMessage"] {
+    border-radius: 18px !important;
+    transition: box-shadow 0.2s ease !important;
+}
+[data-testid="stChatMessage"]:hover {
+    box-shadow: 0 4px 20px rgba(124,58,237,0.10) !important;
+}
+
+/* Avatar circle */
+[data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
+[data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"] {
+    border-radius: 50% !important;
+}
+
+/* Chat input wrapper */
+[data-testid="stChatInput"] {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+}
+
+/* ── Tabs: more refined ── */
+[data-baseweb="tab-list"] {
+    background: transparent !important;
+    gap: 4px !important;
+    border-bottom: 1px solid var(--c-border-mid) !important;
+    padding-bottom: 0 !important;
+}
+[data-baseweb="tab"] {
+    font-family: var(--font-body) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    border-radius: 8px 8px 0 0 !important;
+    padding: 8px 16px !important;
+    color: var(--c-text-muted) !important;
+    border: none !important;
+    background: transparent !important;
+}
+[aria-selected="true"][data-baseweb="tab"] {
+    color: var(--c-rose) !important;
+    border-bottom: 2px solid var(--c-rose) !important;
+    background: rgba(232,72,122,0.06) !important;
+}
+
+/* ── Spinner refinement ── */
+[data-testid="stSpinner"] > div {
+    border-top-color: var(--c-rose) !important;
+}
+
+/* ── Selectbox dropdown ── */
+[data-baseweb="popover"] {
+    border: 1px solid var(--c-border-mid) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+
+/* ── Section headers: top accent line ── */
+.an-section-header {
+    position: relative !important;
+    overflow: hidden !important;
+}
+.an-section-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--c-rose), var(--c-violet));
+    opacity: 0.6;
+}
+
+/* ── Landing page: light-friendly section wrappers ── */
+.landing-section-label {
+    display: inline-block;
+    background: rgba(232,72,122,0.08);
+    border: 1px solid rgba(232,72,122,0.20);
+    color: var(--c-rose-light);
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+/* ═══════════════════════════════════════
+   MOBILE ≤ 768px
+═══════════════════════════════════════ */
 @media (max-width: 768px) {
 
     /* ── CORE LAYOUT ── */
     .block-container {
-        padding: 0 1rem 2rem 1rem !important;
+        padding: 0 0.875rem 2rem 0.875rem !important;
     }
-
-    /* ── VIEWPORT META (Streamlit doesn't inject this) ── */
     * { -webkit-text-size-adjust: 100%; }
 
-    /* ── SIDEBAR: collapse-friendly ── */
+    /* ── SIDEBAR ── */
     section[data-testid="stSidebar"] {
         width: 100% !important;
     }
 
     /* ── HERO ── */
     .hero-section {
-        padding: 48px 16px 40px !important;
+        padding: 44px 14px 36px !important;
     }
     .hero-title {
-        font-size: clamp(36px, 9vw, 56px) !important;
+        font-size: clamp(32px, 8.5vw, 52px) !important;
         line-height: 1.12 !important;
     }
-    .hero-subtitle {
-        font-size: 15px !important;
-    }
+    .hero-subtitle { font-size: 14px !important; }
+    .hero-badge    { font-size: 10px !important; padding: 5px 14px !important; }
 
-    /* ── STATS BAR: 2 cols on mobile ── */
+    /* ── STATS: 2-col ── */
     .stats-bar {
         grid-template-columns: repeat(2, 1fr) !important;
-        margin: 24px 0 !important;
-    }
-    .stat-item { padding: 22px 12px !important; }
-    .stat-number { font-size: 32px !important; }
-    .stat-item::after { display: none !important; }
-
-    /* ── FEATURES: 1 col ── */
-    .features-grid {
-        grid-template-columns: 1fr !important;
-        gap: 14px !important;
         margin: 20px 0 !important;
     }
-    .feature-card { padding: 24px 20px !important; }
+    .stat-item { padding: 18px 10px !important; }
+    .stat-number { font-size: 28px !important; }
+    .stat-item::after { display: none !important; }
 
-    /* ── TRAINING: 1 col ── */
+    /* ── FEATURES: 1-col ── */
+    .features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+        margin: 18px 0 !important;
+    }
+    .feature-card { padding: 20px 18px !important; }
+    .feature-icon { width: 42px !important; height: 42px !important; font-size: 20px !important; }
+    .feature-title { font-size: 17px !important; }
+    .feature-desc  { font-size: 13px !important; }
+
+    /* ── TRAINING: 1-col ── */
     .training-grid {
         grid-template-columns: 1fr !important;
-        gap: 14px !important;
-    }
-    .training-card { padding: 24px 20px !important; }
-    .training-number { font-size: 40px !important; }
-
-    /* ── HOW IT WORKS: 2 col ── */
-    .howit-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
         gap: 12px !important;
     }
-    .howit-card { padding: 22px 14px !important; }
+    .training-card   { padding: 20px 18px !important; }
+    .training-number { font-size: 36px !important; }
+    .training-title  { font-size: 17px !important; }
+
+    /* ── HOW IT WORKS: 2-col ── */
+    .howit-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+    .howit-card { padding: 18px 12px !important; }
 
     /* ── CTA ── */
-    .cta-section {
-        padding: 48px 24px !important;
-    }
-    .cta-title { font-size: 32px !important; }
-    .cta-text  { font-size: 14px !important; }
+    .cta-section { padding: 40px 18px !important; }
+    .cta-title   { font-size: 28px !important; }
+    .cta-text    { font-size: 13px !important; }
 
     /* ── FOOTER ── */
     .premium-footer {
         flex-direction: column !important;
         align-items: flex-start !important;
-        gap: 16px !important;
-        padding: 28px 0 !important;
+        gap: 14px !important;
+        padding: 24px 0 !important;
     }
-    .footer-links {
-        gap: 16px !important;
-        flex-wrap: wrap !important;
-    }
+    .footer-links { gap: 14px !important; flex-wrap: wrap !important; }
 
-    /* ── LOGIN PAGE ── */
-    .block-container { padding: 0 0.75rem 2rem !important; }
-
-    /* ── DEMO GRID: 1 col ── */
+    /* ── DEMO GRID: 1-col ── */
     .demo-grid {
         grid-template-columns: 1fr !important;
-        gap: 10px !important;
+        gap: 9px !important;
     }
 
     /* ── SECTION HEADER ── */
     .an-section-header {
-        padding: 14px 16px !important;
-        border-radius: 14px !important;
+        padding: 12px 14px !important;
+        border-radius: 12px !important;
+        margin-bottom: 16px !important;
     }
-    .an-feature-title { font-size: 18px !important; }
+    .an-feature-title { font-size: 17px !important; }
 
     /* ── CHAT MESSAGES ── */
     [data-testid="stChatMessage"] {
-        padding: 14px 16px !important;
+        padding: 12px 14px !important;
         border-radius: 14px !important;
+        margin-bottom: 10px !important;
     }
 
-    /* ── ANALYSIS PANEL: 2 col ── */
-    [data-testid="stChatMessage"] [data-testid="stHorizontalBlock"] {
-        flex-wrap: wrap !important;
-    }
-
-    /* ── BUTTONS ── */
+    /* ── BUTTONS: compact on mobile ── */
     .stButton > button {
         font-size: 12px !important;
-        padding: 9px 14px !important;
+        padding: 8px 12px !important;
+        min-height: 36px !important;
+        border-radius: 8px !important;
     }
 
     /* ── HEADINGS ── */
-    h2 { font-size: 26px !important; }
-    h3 { font-size: 22px !important; }
+    h2 { font-size: 24px !important; }
+    h3 { font-size: 20px !important; }
+
+    /* ── LOGIN: no side padding ── */
+    .block-container { padding: 0 0.625rem 1.5rem !important; }
+
+    /* ── HOTLINES: smaller text ── */
+    .an-hotline-label, .an-hotline-num { font-size: 11px !important; }
+
+    /* ── User card ── */
+    .an-user-card { padding: 10px 12px !important; }
+    .an-avatar    { width: 34px !important; height: 34px !important; font-size: 14px !important; }
 }
 
+/* ═══════════════════════════════════════
+   MOBILE ≤ 480px
+═══════════════════════════════════════ */
 @media (max-width: 480px) {
-    .hero-title { font-size: 32px !important; }
-    .stats-bar  { grid-template-columns: repeat(2, 1fr) !important; }
-    .howit-grid { grid-template-columns: 1fr !important; }
-    .cta-title  { font-size: 26px !important; }
+    .hero-title  { font-size: 28px !important; }
+    .howit-grid  { grid-template-columns: 1fr !important; }
+    .cta-title   { font-size: 24px !important; }
+    .hero-badge  { display: none !important; }
 
-    /* login center col fills screen */
+    /* Fill login center column on tiny screens */
     [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child,
     [data-testid="stHorizontalBlock"] > [data-testid="column"]:last-child {
         display: none !important;
@@ -1167,6 +1293,13 @@ st.markdown("""
         width: 100% !important;
         flex: 1 !important;
     }
+
+    /* Sidebar nav labels smaller */
+    .an-nav-label { font-size: 9px !important; letter-spacing: 1.2px !important; }
+
+    /* Stat number even smaller */
+    .stat-number { font-size: 24px !important; }
+    .stat-label  { font-size: 9px !important; letter-spacing: 1px !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1341,6 +1474,50 @@ FEATURES = {
 #  LANDING PAGE
 # ============================================================
 if not st.session_state.logged_in and st.session_state.show_landing:
+
+    # ── Top nav bar with theme toggle ──
+    st.markdown("""
+    <style>
+    .landing-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0 0;
+        margin-bottom: 0;
+    }
+    .landing-nav-brand {
+        display: flex; align-items: center; gap: 10px;
+    }
+    .landing-nav-logo {
+        font-size: 22px;
+        line-height: 1;
+    }
+    .landing-nav-name {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        font-size: 18px; font-weight: 600;
+        letter-spacing: 0.08em;
+        background: linear-gradient(135deg, var(--c-rose), var(--c-violet-light));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    </style>
+    <div class="landing-nav">
+        <div class="landing-nav-brand">
+            <span class="landing-nav-logo">⚖️</span>
+            <span class="landing-nav-name">AWAZ-E-NISA</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Theme toggle — right-aligned using columns
+    nav_spacer, nav_toggle = st.columns([8, 1])
+    with nav_toggle:
+        is_dark = st.session_state.theme == "dark"
+        if st.button("🌙" if not is_dark else "☀️", key="landing_theme", help="Toggle theme"):
+            st.session_state.theme = "dark" if not is_dark else "light"
+            st.rerun()
+
     st.markdown("""
     <div class="hero-section">
         <div class="hero-badge">
@@ -1823,7 +2000,14 @@ else:
     # ========== MAIN CONTENT ==========
     feature = st.session_state.active_feature
 
-    st.markdown(f"### ⚖️ {st.session_state.current_mode}")
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0 8px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--c-text-dim);font-weight:500;text-transform:uppercase;letter-spacing:1.5px;">Mode</span>
+            <span style="background:linear-gradient(90deg,var(--c-rose),var(--c-violet));color:white;padding:3px 12px;border-radius:999px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:0.05em;">{st.session_state.current_mode}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if feature == "Legal Chat":
         st.markdown(f"""
@@ -1840,19 +2024,136 @@ else:
 
         if not st.session_state.messages:
             st.markdown("""
-            <div style="text-align: center; padding: 52px 20px;">
-                <div style="font-size: 52px; margin-bottom: 18px;">⚖️</div>
-                <h3 style="font-family:var(--font-display);font-size:28px;font-weight:300;color:var(--c-text);">Welcome to Awaz-e-Nisa</h3>
-                <p style="font-family:var(--font-body);color:var(--c-text-muted);font-weight:300;font-size:15px;margin-top:10px;">Your AI legal assistant for Pakistani law. Ask me anything about your legal rights.</p>
-            </div>
-            """, unsafe_allow_html=True)
+            <style>
+            .chat-welcome {
+                text-align: center;
+                padding: 48px 24px 32px;
+            }
+            .chat-welcome-icon {
+                width: 72px; height: 72px;
+                background: linear-gradient(135deg, rgba(232,72,122,0.15), rgba(124,58,237,0.15));
+                border: 1px solid rgba(232,72,122,0.25);
+                border-radius: 20px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 36px;
+                margin: 0 auto 20px;
+                box-shadow: 0 8px 32px rgba(232,72,122,0.15);
+            }
+            .chat-welcome-title {
+                font-family: 'Cormorant Garamond', Georgia, serif;
+                font-size: 30px; font-weight: 300;
+                color: var(--c-text);
+                margin-bottom: 8px;
+                letter-spacing: -0.01em;
+            }
+            .chat-welcome-sub {
+                font-family: 'DM Sans', sans-serif;
+                font-size: 14px; color: var(--c-text-muted);
+                font-weight: 300; line-height: 1.6;
+                max-width: 420px; margin: 0 auto 32px;
+            }
+            .chat-pills {
+                display: flex; flex-wrap: wrap;
+                justify-content: center; gap: 8px;
+                margin-bottom: 36px;
+            }
+            .chat-pill {
+                background: rgba(232,72,122,0.07);
+                border: 1px solid rgba(232,72,122,0.18);
+                color: var(--c-rose-light);
+                padding: 4px 14px;
+                border-radius: 999px;
+                font-family: 'DM Sans', sans-serif;
+                font-size: 12px; font-weight: 500;
+            }
+            .demo-grid-v2 {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                max-width: 780px;
+                margin: 0 auto;
+            }
+            .demo-card-v2 {
+                background: var(--c-surface);
+                border: 1px solid var(--c-border-mid);
+                border-radius: 14px;
+                padding: 16px 18px;
+                cursor: pointer;
+                transition: all 0.22s ease;
+                text-align: left;
+                position: relative;
+                overflow: hidden;
+            }
+            .demo-card-v2::before {
+                content: '';
+                position: absolute;
+                left: 0; top: 0; bottom: 0;
+                width: 3px;
+                background: linear-gradient(180deg, var(--c-rose), var(--c-violet));
+                border-radius: 3px 0 0 3px;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            .demo-card-v2:hover {
+                border-color: var(--c-rose);
+                background: rgba(232,72,122,0.04);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(232,72,122,0.10);
+            }
+            .demo-card-v2:hover::before { opacity: 1; }
+            .demo-cat-v2 {
+                font-family: 'DM Mono', monospace;
+                font-size: 9px; font-weight: 500;
+                color: var(--c-rose);
+                letter-spacing: 1.2px;
+                text-transform: uppercase;
+                margin-bottom: 6px;
+                display: flex; align-items: center; gap: 6px;
+            }
+            .demo-cat-v2::after {
+                content: '';
+                flex: 1;
+                height: 1px;
+                background: rgba(232,72,122,0.15);
+            }
+            .demo-txt-v2 {
+                font-family: 'DM Sans', sans-serif;
+                font-size: 13px; color: var(--c-text-muted);
+                font-weight: 300; line-height: 1.5;
+            }
+            </style>
 
-            st.markdown("""
-            <div class="demo-grid">
-                <div class="demo-question"><div class="demo-category">Family Law</div><div class="demo-text">My husband married a second woman. What are my rights?</div></div>
-                <div class="demo-question"><div class="demo-category">Child Custody</div><div class="demo-text">Can my ex-husband take our children away from me?</div></div>
-                <div class="demo-question"><div class="demo-category">Financial Rights</div><div class="demo-text">How much maintenance can I claim for my children?</div></div>
-                <div class="demo-question"><div class="demo-category">Khula</div><div class="demo-text">Khula lene ka kya tareeqa hai?</div></div>
+            <div class="chat-welcome">
+                <div class="chat-welcome-icon">⚖️</div>
+                <div class="chat-welcome-title">Welcome to Awaz-e-Nisa</div>
+                <div class="chat-welcome-sub">Your AI legal assistant trained on 164 Pakistani law documents. Ask in Urdu or English — get cited answers instantly.</div>
+                <div class="chat-pills">
+                    <span class="chat-pill">🏛️ Family Law</span>
+                    <span class="chat-pill">📝 Khula & Divorce</span>
+                    <span class="chat-pill">👶 Child Custody</span>
+                    <span class="chat-pill">💰 Maintenance</span>
+                    <span class="chat-pill">🛡️ Harassment</span>
+                    <span class="chat-pill">💻 Cybercrime</span>
+                </div>
+            </div>
+
+            <div class="demo-grid-v2">
+                <div class="demo-card-v2">
+                    <div class="demo-cat-v2">Family Law</div>
+                    <div class="demo-txt-v2">My husband married a second woman. What are my rights under Pakistani law?</div>
+                </div>
+                <div class="demo-card-v2">
+                    <div class="demo-cat-v2">Child Custody</div>
+                    <div class="demo-txt-v2">Can my ex-husband take our children away from me after divorce?</div>
+                </div>
+                <div class="demo-card-v2">
+                    <div class="demo-cat-v2">Financial Rights</div>
+                    <div class="demo-txt-v2">How much maintenance can I legally claim for my children?</div>
+                </div>
+                <div class="demo-card-v2">
+                    <div class="demo-cat-v2">Khula</div>
+                    <div class="demo-txt-v2">Khula lene ka kya tareeqa hai? Court mein kya karna hoga?</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
