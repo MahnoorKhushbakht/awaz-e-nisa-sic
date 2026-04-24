@@ -28,6 +28,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -49,12 +58,11 @@ configure_paths()
 init_db()
 
 # ============================================================
-#  WHISPER MODEL (FROM OLD APP)
+#  WHISPER MODEL
 # ============================================================
 @st.cache_resource
 def load_whisper_model():
-    """Load Whisper model - from old app configuration"""
-    return whisper.load_model("small")  # Using "small" model like old app
+    return whisper.load_model("small") 
 
 # ============================================================
 #  SESSION STATE DEFAULTS
@@ -66,7 +74,7 @@ defaults = {
     "current_mode": "GENERAL USER (Woman)",
     "active_feature": "Legal Chat",
     "last_query": "",
-    "theme": "light",
+    "theme": "dark",
     "expanded_panels": {},
     "last_audio_id": None,
     "username": "",
@@ -191,24 +199,22 @@ section[data-testid="stSidebar"] .block-container { padding: 1.5rem 1.25rem 2rem
     font-size: 13px !important;
     letter-spacing: 0.02em !important;
     padding: 10px 18px !important;
-    transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
-    box-shadow: 0 2px 10px rgba(232,72,122,0.18) !important;
+    transition: opacity 0.2s ease, filter 0.2s ease !important;
+    box-shadow: none !important;
     position: relative !important;
     overflow: hidden !important;
-}
-.stButton > button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
-    pointer-events: none;
+    transform: none !important;
 }
 .stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 24px rgba(232,72,122,0.30) !important;
-    filter: brightness(1.08) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    filter: brightness(1.10) !important;
+    opacity: 0.95 !important;
 }
-.stButton > button:active { transform: translateY(0) !important; }
+.stButton > button:active {
+    filter: brightness(0.95) !important;
+    transform: none !important;
+}
 
 /* ── TYPOGRAPHY ── */
 h1, h2, h3, h4, h5, h6 {
@@ -282,14 +288,14 @@ hr { border-color: var(--c-border-mid) !important; margin: 12px 0 !important; }
 .hero-title {
     font-family: var(--font-display);
     font-size: clamp(52px, 7.5vw, 88px);
-    font-weight: 300;
+    font-weight: 700;
     line-height: 1.08;
     margin-bottom: 28px;
     color: var(--c-text);
     letter-spacing: -0.02em;
 }
 .hero-title strong {
-    font-weight: 600;
+    font-weight: 800;
 }
 
 .hero-subtitle {
@@ -851,13 +857,15 @@ section[data-testid="stSidebar"] {
     font-size: 13px !important;
     letter-spacing: 0.02em !important;
     padding: 10px 18px !important;
-    transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
-    box-shadow: 0 2px 10px rgba(192,51,90,0.16) !important;
+    transition: opacity 0.2s ease, filter 0.2s ease !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 .stButton > button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 24px rgba(192,51,90,0.24) !important;
-    filter: brightness(1.06) !important;
+    transform: none !important;
+    box-shadow: none !important;
+    filter: brightness(1.10) !important;
+    opacity: 0.95 !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -899,10 +907,10 @@ hr { border-color: var(--c-border-mid) !important; margin: 12px 0 !important; }
 }
 .hero-title {
     font-family: var(--font-display); font-size: clamp(52px, 7.5vw, 88px);
-    font-weight: 300; line-height: 1.08; margin-bottom: 28px;
+    font-weight: 700; line-height: 1.08; margin-bottom: 28px;
     color: var(--c-text); letter-spacing: -0.02em;
 }
-.hero-title strong { font-weight: 600; }
+.hero-title strong { font-weight: 800; }
 .hero-gradient-text {
     background: linear-gradient(135deg, var(--c-rose), var(--c-violet-light));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600;
@@ -1068,6 +1076,15 @@ st.markdown("""
     background: none !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
+}
+
+/* ── GLOBAL: kill all button 3D effects ── */
+.stButton > button,
+.stButton > button:hover,
+.stButton > button:active,
+.stButton > button:focus {
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* ── CHAT interface polish ── */
@@ -1258,6 +1275,12 @@ st.markdown("""
         padding: 8px 12px !important;
         min-height: 36px !important;
         border-radius: 8px !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .stButton > button:hover {
+        transform: none !important;
+        box-shadow: none !important;
     }
 
     /* ── HEADINGS ── */
@@ -1892,7 +1915,7 @@ else:
         st.divider()
 
         # ============================================================
-        #  VOICE INPUT — USING WHISPER (FROM OLD APP CONFIGURATION)
+        #  VOICE INPUT — USING WHISPER 
         # ============================================================
         st.markdown('<span class="an-nav-label"> VOICE COMMAND</span>', unsafe_allow_html=True)
         audio = mic_recorder(start_prompt=" Start Speaking", stop_prompt="⏹️ Stop", key="recorder", just_once=True, use_container_width=True)
