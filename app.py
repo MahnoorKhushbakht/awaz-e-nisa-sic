@@ -243,8 +243,8 @@ section[data-testid="stSidebar"] .block-container { padding: 1.5rem 1.25rem 2rem
 /* ── BUTTONS ── */
 .stButton > button {
     background: linear-gradient(135deg, var(--c-rose) 0%, var(--c-violet) 100%) !important;
-    color: #fff !important;
-    border: none !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* Added subtle border for definition */
     border-radius: 8px !important;
     font-family: var(--font-body) !important;
     font-weight: 600 !important;
@@ -254,21 +254,21 @@ section[data-testid="stSidebar"] .block-container { padding: 1.5rem 1.25rem 2rem
     min-height: 32px !important;
     height: auto !important;
     line-height: 1.3 !important;
-    transition: opacity 0.2s ease, filter 0.2s ease !important;
-    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important; /* Added shadow for depth */
     position: relative !important;
     overflow: hidden !important;
-    transform: none !important;
 }
+
 .stButton > button:hover {
-    transform: none !important;
-    box-shadow: none !important;
-    filter: brightness(1.10) !important;
-    opacity: 0.95 !important;
+    filter: brightness(1.2) !important; /* Increased brightness on hover */
+    box-shadow: 0 6px 20px rgba(232, 72, 122, 0.2) !important; /* Soft glow effect */
+    border-color: rgba(255, 255, 255, 0.3) !important;
 }
+
 .stButton > button:active {
-    filter: brightness(0.95) !important;
-    transform: none !important;
+    filter: brightness(0.9) !important;
+    transform: scale(0.98) !important; /* Subtle press effect */
 }
 
 /* ── TYPOGRAPHY ── */
