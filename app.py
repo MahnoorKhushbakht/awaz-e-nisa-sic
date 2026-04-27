@@ -1918,6 +1918,11 @@ else:
             st.session_state.theme = "light" if is_dark else "dark"
             st.rerun()
 
+        # if st.sidebar.button("Clear System Cache"):
+        #     st.cache_resource.clear()
+        #     st.cache_data.clear()
+        #     st.rerun()
+
         st.markdown(f"""
         <div class="an-user-card">
             <div class="an-avatar">{st.session_state.username[0].upper()}</div>
