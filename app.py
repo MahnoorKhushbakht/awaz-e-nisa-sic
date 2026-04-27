@@ -19,7 +19,7 @@ from streamlit_mic_recorder import mic_recorder
 from legal_advisor import is_legal_query
 
 # ============================================================
-#  CONFIGURATION (MUST BE FIRST)
+#  CONFIGURATION 
 # ============================================================
 st.set_page_config(
     page_title="Awaz-e-Nisa | Legal AI for Pakistani Women",
@@ -29,12 +29,64 @@ st.set_page_config(
 )
 
 hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* Header */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 99 !important; /* Lowered so it doesn't block the button */
+    pointer-events: none !important;
+    padding: 0 !important;
+}
+
+/* Ensure the sidebar toggle button is ALWAYS visible and clickable */
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important; /* Force visibility */
+    pointer-events: auto !important;
+    position: fixed !important;
+    top: 14px !important;
+    left: 14px !important;
+    background: var(--c-surface2, #161329) !important;
+    border: 1px solid rgba(180,130,255,0.20) !important;
+    border-radius: 8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.32) !important;
+    z-index: 999999 !important; /* Keep it on top of everything */
+    transition: all 0.2s ease !important;
+}
+
+[data-testid="collapsedControl"]:hover {
+    border-color: rgba(232,72,122,0.50) !important;
+    background: rgba(232,72,122,0.10) !important;
+    box-shadow: 0 4px 16px rgba(232,72,122,0.18) !important;
+}
+
+[data-testid="collapsedControl"] svg {
+    color: #a78bfa !important;
+    width: 15px !important;
+    height: 15px !important;
+}
+
+.stButton > button {
+    font-size: 12px !important;
+    padding: 7px 14px !important;
+    min-height: 32px !important;
+    height: auto !important;
+    line-height: 1.3 !important;
+    border-radius: 8px !important;
+}
+</style>
+"""
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
 warnings.filterwarnings("ignore")
@@ -62,7 +114,7 @@ init_db()
 # ============================================================
 @st.cache_resource
 def load_whisper_model():
-    return whisper.load_model("small") 
+    return whisper.load_model("small")
 
 # ============================================================
 #  SESSION STATE DEFAULTS
@@ -193,12 +245,15 @@ section[data-testid="stSidebar"] .block-container { padding: 1.5rem 1.25rem 2rem
     background: linear-gradient(135deg, var(--c-rose) 0%, var(--c-violet) 100%) !important;
     color: #fff !important;
     border: none !important;
-    border-radius: var(--radius-md) !important;
+    border-radius: 8px !important;
     font-family: var(--font-body) !important;
     font-weight: 600 !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     letter-spacing: 0.02em !important;
-    padding: 10px 18px !important;
+    padding: 7px 14px !important;
+    min-height: 32px !important;
+    height: auto !important;
+    line-height: 1.3 !important;
     transition: opacity 0.2s ease, filter 0.2s ease !important;
     box-shadow: none !important;
     position: relative !important;
@@ -294,9 +349,7 @@ hr { border-color: var(--c-border-mid) !important; margin: 12px 0 !important; }
     color: var(--c-text);
     letter-spacing: -0.02em;
 }
-.hero-title strong {
-    font-weight: 800;
-}
+.hero-title strong { font-weight: 800; }
 
 .hero-subtitle {
     font-family: var(--font-body);
@@ -851,12 +904,15 @@ section[data-testid="stSidebar"] {
     background: linear-gradient(135deg, var(--c-rose) 0%, var(--c-violet) 100%) !important;
     color: #fff !important;
     border: none !important;
-    border-radius: var(--radius-md) !important;
+    border-radius: 8px !important;
     font-family: var(--font-body) !important;
     font-weight: 600 !important;
-    font-size: 13px !important;
+    font-size: 12px !important;
     letter-spacing: 0.02em !important;
-    padding: 10px 18px !important;
+    padding: 7px 14px !important;
+    min-height: 32px !important;
+    height: auto !important;
+    line-height: 1.3 !important;
     transition: opacity 0.2s ease, filter 0.2s ease !important;
     box-shadow: none !important;
     transform: none !important;
@@ -1038,15 +1094,11 @@ else:
     st.markdown(light_theme, unsafe_allow_html=True)
 
 # ============================================================
-#  GLOBAL POLISH + MOBILE RESPONSIVE CSS
+#  MOBILE RESPONSIVE CSS
 # ============================================================
 st.markdown("""
 <style>
-/* ═══════════════════════════════════════
-   GLOBAL POLISH (all screen sizes)
-═══════════════════════════════════════ */
 
-/* ── Fix ⚖️ emoji: force native color rendering ── */
 .sidebar-logo-emoji,
 .login-logo-emoji,
 .hero-logo-emoji,
@@ -1078,7 +1130,7 @@ st.markdown("""
     background-clip: initial !important;
 }
 
-/* ── GLOBAL: kill all button 3D effects ── */
+
 .stButton > button,
 .stButton > button:hover,
 .stButton > button:active,
@@ -1087,7 +1139,7 @@ st.markdown("""
     box-shadow: none !important;
 }
 
-/* ── CHAT interface polish ── */
+
 [data-testid="stChatMessage"] {
     border-radius: 18px !important;
     transition: box-shadow 0.2s ease !important;
@@ -1096,19 +1148,17 @@ st.markdown("""
     box-shadow: 0 4px 20px rgba(124,58,237,0.10) !important;
 }
 
-/* Avatar circle */
 [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessage"] [data-testid="stChatMessageAvatarAssistant"] {
     border-radius: 50% !important;
 }
 
-/* Chat input wrapper */
 [data-testid="stChatInput"] {
     border-radius: 16px !important;
     overflow: hidden !important;
 }
 
-/* ── Tabs: more refined ── */
+/* ── Tabs ── */
 [data-baseweb="tab-list"] {
     background: transparent !important;
     gap: 4px !important;
@@ -1131,7 +1181,7 @@ st.markdown("""
     background: rgba(232,72,122,0.06) !important;
 }
 
-/* ── Spinner refinement ── */
+/* ── Spinner ── */
 [data-testid="stSpinner"] > div {
     border-top-color: var(--c-rose) !important;
 }
@@ -1156,7 +1206,7 @@ st.markdown("""
     opacity: 0.6;
 }
 
-/* ── Landing page: light-friendly section wrappers ── */
+/* ── Landing page section label ── */
 .landing-section-label {
     display: inline-block;
     background: rgba(232,72,122,0.08);
@@ -1176,18 +1226,15 @@ st.markdown("""
 ═══════════════════════════════════════ */
 @media (max-width: 768px) {
 
-    /* ── CORE LAYOUT ── */
     .block-container {
         padding: 0 0.875rem 2rem 0.875rem !important;
     }
     * { -webkit-text-size-adjust: 100%; }
 
-    /* ── SIDEBAR ── */
     section[data-testid="stSidebar"] {
         width: 100% !important;
     }
 
-    /* ── HERO ── */
     .hero-section {
         padding: 44px 14px 36px !important;
     }
@@ -1198,7 +1245,6 @@ st.markdown("""
     .hero-subtitle { font-size: 14px !important; }
     .hero-badge    { font-size: 10px !important; padding: 5px 14px !important; }
 
-    /* ── STATS: 2-col ── */
     .stats-bar {
         grid-template-columns: repeat(2, 1fr) !important;
         margin: 20px 0 !important;
@@ -1207,7 +1253,6 @@ st.markdown("""
     .stat-number { font-size: 28px !important; }
     .stat-item::after { display: none !important; }
 
-    /* ── FEATURES: 1-col ── */
     .features-grid {
         grid-template-columns: 1fr !important;
         gap: 12px !important;
@@ -1218,7 +1263,6 @@ st.markdown("""
     .feature-title { font-size: 17px !important; }
     .feature-desc  { font-size: 13px !important; }
 
-    /* ── TRAINING: 1-col ── */
     .training-grid {
         grid-template-columns: 1fr !important;
         gap: 12px !important;
@@ -1227,19 +1271,16 @@ st.markdown("""
     .training-number { font-size: 36px !important; }
     .training-title  { font-size: 17px !important; }
 
-    /* ── HOW IT WORKS: 2-col ── */
     .howit-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
     }
     .howit-card { padding: 18px 12px !important; }
 
-    /* ── CTA ── */
     .cta-section { padding: 40px 18px !important; }
     .cta-title   { font-size: 28px !important; }
     .cta-text    { font-size: 13px !important; }
 
-    /* ── FOOTER ── */
     .premium-footer {
         flex-direction: column !important;
         align-items: flex-start !important;
@@ -1248,13 +1289,11 @@ st.markdown("""
     }
     .footer-links { gap: 14px !important; flex-wrap: wrap !important; }
 
-    /* ── DEMO GRID: 1-col ── */
     .demo-grid {
         grid-template-columns: 1fr !important;
         gap: 9px !important;
     }
 
-    /* ── SECTION HEADER ── */
     .an-section-header {
         padding: 12px 14px !important;
         border-radius: 12px !important;
@@ -1262,19 +1301,17 @@ st.markdown("""
     }
     .an-feature-title { font-size: 17px !important; }
 
-    /* ── CHAT MESSAGES ── */
     [data-testid="stChatMessage"] {
         padding: 12px 14px !important;
         border-radius: 14px !important;
         margin-bottom: 10px !important;
     }
 
-    /* ── BUTTONS: compact on mobile ── */
     .stButton > button {
-        font-size: 12px !important;
-        padding: 8px 12px !important;
-        min-height: 36px !important;
-        border-radius: 8px !important;
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+        min-height: 28px !important;
+        border-radius: 7px !important;
         transform: none !important;
         box-shadow: none !important;
     }
@@ -1283,17 +1320,13 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* ── HEADINGS ── */
     h2 { font-size: 24px !important; }
     h3 { font-size: 20px !important; }
 
-    /* ── LOGIN: no side padding ── */
     .block-container { padding: 0 0.625rem 1.5rem !important; }
 
-    /* ── HOTLINES: smaller text ── */
     .an-hotline-label, .an-hotline-num { font-size: 11px !important; }
 
-    /* ── User card ── */
     .an-user-card { padding: 10px 12px !important; }
     .an-avatar    { width: 34px !important; height: 34px !important; font-size: 14px !important; }
 }
@@ -1307,7 +1340,6 @@ st.markdown("""
     .cta-title   { font-size: 24px !important; }
     .hero-badge  { display: none !important; }
 
-    /* Fill login center column on tiny screens */
     [data-testid="stHorizontalBlock"] > [data-testid="column"]:first-child,
     [data-testid="stHorizontalBlock"] > [data-testid="column"]:last-child {
         display: none !important;
@@ -1317,10 +1349,8 @@ st.markdown("""
         flex: 1 !important;
     }
 
-    /* Sidebar nav labels smaller */
     .an-nav-label { font-size: 9px !important; letter-spacing: 1.2px !important; }
 
-    /* Stat number even smaller */
     .stat-number { font-size: 24px !important; }
     .stat-label  { font-size: 9px !important; letter-spacing: 1px !important; }
 }
@@ -1498,7 +1528,6 @@ FEATURES = {
 # ============================================================
 if not st.session_state.logged_in and st.session_state.show_landing:
 
-    # ── Top nav bar with theme toggle ──
     st.markdown("""
     <style>
     .landing-nav {
@@ -1533,7 +1562,6 @@ if not st.session_state.logged_in and st.session_state.show_landing:
     </div>
     """, unsafe_allow_html=True)
 
-    # Theme toggle — right-aligned using columns
     nav_spacer, nav_toggle = st.columns([8, 1])
     with nav_toggle:
         is_dark = st.session_state.theme == "dark"
@@ -1689,12 +1717,10 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
 
     st.markdown("""
     <style>
-    /* ── reset container for login page only ── */
     .block-container { padding: 0 0 0 0 !important; max-width: 100% !important; }
     [data-testid="column"] { padding: 0 !important; gap: 0 !important; }
     [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
-    /* ════ LEFT PANEL ════ */
     .lp-left {
         min-height: 100vh;
         background: linear-gradient(160deg, #0f0c1e 0%, #160e28 40%, #0c0a18 100%);
@@ -1759,7 +1785,6 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
         letter-spacing:1.2px; text-transform:uppercase;
     }
 
-    /* ════ RIGHT PANEL ════ */
     .lp-right {
         min-height: 100vh;
         background: #06050e;
@@ -1796,7 +1821,6 @@ elif not st.session_state.logged_in and not st.session_state.show_landing:
     </style>
     """, unsafe_allow_html=True)
 
-    # ── centered single column ──
     _, center_col, _ = st.columns([1, 1.4, 1])
 
     with center_col:
@@ -1914,9 +1938,6 @@ else:
 
         st.divider()
 
-        # ============================================================
-        #  VOICE INPUT — USING WHISPER 
-        # ============================================================
         st.markdown('<span class="an-nav-label"> VOICE COMMAND</span>', unsafe_allow_html=True)
         audio = mic_recorder(start_prompt=" Start Speaking", stop_prompt="⏹️ Stop", key="recorder", just_once=True, use_container_width=True)
 
@@ -1935,11 +1956,8 @@ else:
                         fp16=False, no_speech_threshold=0.6
                     )
                     raw_text = res["text"].strip()
-
-
                     clean_q = re.sub(r'[^a-zA-Z0-9\s\.,\?!]', '', raw_text)
 
-                    # Filter Hallucinations
                     if len(clean_q) > 5 and not any(x in clean_q.lower() for x in ["have a nice night", "thank you"]):
                         st.session_state.messages.append({"role": "user", "content": clean_q})
                         ans = st.session_state.rag.invoke({"question": clean_q, "mode": st.session_state.current_mode})
