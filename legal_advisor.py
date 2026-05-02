@@ -2,7 +2,7 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 
-# 1. SQLite Fix (Zaroori hai taake Streamlit Cloud par ChromaDB crash na kare)
+
 try:
     __import__('pysqlite3')
     import sys
